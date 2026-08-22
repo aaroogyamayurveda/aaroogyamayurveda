@@ -10,7 +10,7 @@
     if(!user)return;
     running=true;
     try{
-      const rLeads=await db().from('crm_leads').select('id,customer_id,mobile,lead_status,assigned_to').eq('assigned_to',user.id).in('lead_status',['assigned','contacted','followup','qualified']);
+      const rLeads=await db().from('crm_leads').select('id,customer_id,mobile,lead_status,assigned_to,next_followup_at').eq('assigned_to',user.id).in('lead_status',['assigned','contacted','followup','qualified']);
       if(rLeads.error)throw rLeads.error;
       const leads=rLeads.data||[];
       if(!leads.length)return;
@@ -18,32 +18,35 @@
       const mobiles=leads.map(x=>String(x.mobile||'').replace(/\D/g,'')).filter(x=>x.length===10);
       let followups=[];
       if(customerIds.length){
-        const r=await db().from('followups').select('id,customer_id,followup_at,status').in('customer_id',customerIds).in('status',activeStatus).gte('followup_at',new Date(Date.now()-86400000).toISOString()).limit(1000);
+        const r=await db().from('followups').select('id,customer_id,followup_at,status').in('customer_id',customerIds).in('status',activeStatus).gte('followup_at',new Date(Date.now()-86400000).toISOString()).order('followup_at',{ascending:true}).limit(1000);
         if(!r.error)followups=followups.concat(r.data||[]);
       }
-      // Also match by phone for older records where the lead/customer link was not saved.
       if(mobiles.length){
-        const r=await db().from('followups').select('id,customer_id,followup_at,status,customers(mobile)').in('status',activeStatus).gte('followup_at',new Date(Date.now()-86400000).toISOString()).limit(1000);
+        const r=await db().from('followups').select('id,customer_id,followup_at,status,customers(mobile)').in('status',activeStatus).gte('followup_at',new Date(Date.now()-86400000).toISOString()).order('followup_at',{ascending:true}).limit(1000);
         if(!r.error){
           const set=new Set(mobiles);
           followups=followups.concat((r.data||[]).filter(x=>set.has(String(x.customers?.mobile||'').replace(/\D/g,''))));
         }
       }
-      const byCustomer=new Set(followups.map(x=>x.customer_id).filter(Boolean));
-      const activeMobiles=new Set(followups.map(x=>String(x.customers?.mobile||'').replace(/\D/g,'')).filter(Boolean));
-      const updates=[];
+      const byCustomer=new Map();
+      for(const f of followups){if(f.customer_id&&!byCustomer.has(f.customer_id))byCustomer.set(f.customer_id,f.followup_at)}
+      const activeMobiles=new Map();
+      for(const f of followups){const m=String(f.customers?.mobile||'').replace(/\D/g,'');if(m&&!activeMobiles.has(m))activeMobiles.set(m,f.followup_at)}
+      const fixes=[];
       for(const lead of leads){
         const m=String(lead.mobile||'').replace(/\D/g,'');
-        if((lead.customer_id&&byCustomer.has(lead.customer_id))||(m&&activeMobiles.has(m))){
-          if(lead.lead_status!=='followup')updates.push(lead.id);
-        }
+        const fu=(lead.customer_id&&byCustomer.get(lead.customer_id))||activeMobiles.get(m);
+        if(fu&&lead.lead_status!=='followup')fixes.push({id:lead.id,followup_at:fu});
+        else if(fu&&lead.lead_status==='followup'&&lead.next_followup_at!==fu)fixes.push({id:lead.id,followup_at:fu});
       }
-      if(updates.length){
+      for(const fix of fixes){
         const now=new Date().toISOString();
-        const u=await db().from('crm_leads').update({lead_status:'followup',next_followup_at:null,updated_at:now}).in('id',updates);
+        const u=await db().from('crm_leads').update({lead_status:'followup',next_followup_at:fix.followup_at,updated_at:now}).eq('id',fix.id);
         if(u.error)throw u.error;
-        window.dispatchEvent(new CustomEvent('crm1FollowupLeadStatusSynced',{detail:{lead_ids:updates}}));
-        window.dispatchEvent(new CustomEvent('crm1DataChanged',{detail:{type:'followup_status_sync',lead_ids:updates}}));
+      }
+      if(fixes.length){
+        window.dispatchEvent(new CustomEvent('crm1FollowupLeadStatusSynced',{detail:{lead_ids:fixes.map(x=>x.id)}}));
+        window.dispatchEvent(new CustomEvent('crm1DataChanged',{detail:{type:'followup_status_sync',lead_ids:fixes.map(x=>x.id)}}));
       }
     }catch(e){console.warn('Follow-up lead status sync failed',e)}
     finally{running=false}
