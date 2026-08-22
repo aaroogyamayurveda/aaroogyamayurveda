@@ -26,4 +26,5 @@
   await load('./crm1-workforce-runtime.js?v=2');
   await load('./crm1-workforce-ui-bridge.js?v=2');
   await load('./crm1-followup-lead-status-sync.js?v=1');
+  await load('./crm1-order-assignment-verification-guard.js?v=1');
 })();
