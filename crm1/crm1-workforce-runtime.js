@@ -25,7 +25,8 @@
           };
         }
         var runReport=function(){
-          var d=new Date().toISOString().slice(0,10),from=d+'T00:00:00',to=d+'T23:59:59.999';
+          var d=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+          var from=d+'T00:00:00',to=d+'T23:59:59.999';
           Promise.all([
             window.sb.from('crm_leads').select('id,assigned_to,lead_status,first_contact_at').gte('created_at',from).lte('created_at',to),
             window.sb.from('orders').select('id,agent_id,created_at').gte('created_at',from).lte('created_at',to),
