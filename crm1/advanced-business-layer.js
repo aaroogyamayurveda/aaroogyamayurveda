@@ -14,6 +14,7 @@
   await load('./advanced-business-layer.core.js');
   await load('./crm1-followup-verification-fix.js');
   await load('./crm1-followups-queue-fix.js');
+  await load('./crm1-followup-customer-context-fix.js?v=2');
   await load('./crm1-agent-workspace.js');
   await load('./crm1-call-console.js');
   await load('./crm1-call-disposition.js');
