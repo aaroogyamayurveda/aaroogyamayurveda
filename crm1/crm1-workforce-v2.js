@@ -34,6 +34,7 @@
     if(id==='crm1W2Assignment') {renderAssignment(); loadBatches(); loadAgents();}
     if(id==='crm1W2Queue') loadQueue();
   }
+  window.crm1WorkforceOpenPage=openPage;
 
   function parseCsv(text){
     var lines=String(text||'').replace(/\r/g,'').split('\n').filter(function(x){return x.trim();});
@@ -112,14 +113,14 @@
   }
   function applyContext(c){
     var f=document.getElementById('createOrderPageForm');if(!f)return Promise.resolve();
-    function set(el,v){if(el&&v!=null){el.value=String(v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true));}}
+    function set(el,v){if(el&&v!=null){el.value=String(v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}}
     set(f.elements.customer_name,c.customer_name);set(document.getElementById('pageMobile'),c.mobile);set(document.getElementById('orderPincode'),c.pincode);set(f.elements.address,c.address);
     if(window.crm1SetCallContext)window.crm1SetCallContext({lead_id:c.lead_id,customer_id:c.customer_id});
     var badge=document.getElementById('crm1W2LeadBadge');if(!badge){badge=document.createElement('div');badge.id='crm1W2LeadBadge';badge.style.cssText='margin:0 0 14px;padding:11px 13px;border-radius:10px;background:#edf5ea;color:#164b30;border:1px solid #d8e7d3;font-size:13px;font-weight:700;';f.insertBefore(badge,f.firstChild);}badge.textContent='Calling Queue Lead • '+(c.mobile||'')+(c.customer_name?' • '+c.customer_name:'')+(c.product_name?' • '+c.product_name:'');
     return pickProduct(c.product_name).then(function(){
       var st=document.getElementById('orderState'),city=document.getElementById('orderCity');
       if(!st||!c.state)return;var so=Array.prototype.find.call(st.options,function(o){return o.text.trim().toLowerCase()===String(c.state).trim().toLowerCase()||o.value===c.state;});
-      if(so){st.value=so.value;st.dispatchEvent(new Event('change',{bubbles:true}));return sleep(400).then(function(){if(!city||!c.city)return;var co=Array.prototype.find.call(city.options,function(o){return o.text.trim().toLowerCase()===String(c.city).trim().toLowerCase()||o.value===c.city;});if(co){city.value=co.value;city.dispatchEvent(new Event('change',{bubbles:true));}});}
+      if(so){st.value=so.value;st.dispatchEvent(new Event('change',{bubbles:true}));return sleep(400).then(function(){if(!city||!c.city)return;var co=Array.prototype.find.call(city.options,function(o){return o.text.trim().toLowerCase()===String(c.city).trim().toLowerCase()||o.value===c.city;});if(co){city.value=co.value;city.dispatchEvent(new Event('change',{bubbles:true});}});}
     });
   }
   function pickProduct(name){if(!name)return Promise.resolve();var s=document.getElementById('pageProduct');if(!s)return Promise.resolve();var count=0;return new Promise(function(resolve){function go(){var o=Array.prototype.find.call(s.options,function(opt){return String(opt.textContent||'').toLowerCase().indexOf(String(name).toLowerCase())>=0;});if(o){s.value=o.value;s.dispatchEvent(new Event('change',{bubbles:true}));resolve();return;}if(count++>30){resolve();return;}setTimeout(go,200);}go();});}
