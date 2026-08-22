@@ -1,2 +1,2 @@
 const SUPABASE_URL='https://envziigrxkmwmamswduv.supabase.co';const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVudnppaWdyeGttd21hbXN3ZHV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjk3MDMsImV4cCI6MjEwMjcwNTcwM30.gkKugJKCHJnO92ghKCQAHoq7CZkiDVL_QzNBf8mtVw8';
-if(location.pathname.includes('/crm2/')){const s=document.createElement('script');s.src='./lead-upload-fix.js?v=11';document.head.appendChild(s);}
+if(location.pathname.includes('/crm2/')){const s=document.createElement('script');s.src='./lead-upload-fix.js?v=12';document.head.appendChild(s);const p=document.createElement('script');p.src='./path-fix.js?v=1';document.head.appendChild(p);}
