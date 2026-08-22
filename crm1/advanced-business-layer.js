@@ -22,4 +22,5 @@
   await load('./crm1-lead-workqueue.js');
   await load('./crm1-telephony-bridge-readiness.js');
   await load('./crm1-lead-context-bridge.js?v=3');
+  await load('./crm1-workforce-v2.js?v=1');
 })();
