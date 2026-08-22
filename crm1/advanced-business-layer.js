@@ -14,7 +14,6 @@
   await load('./advanced-business-layer.core.js');
   await load('./crm1-followup-verification-fix.js');
   await load('./crm1-followups-queue-fix.js');
-  /* Existing tested Telephony Admin remains the single telephony administration module. */
   await load('./crm1-agent-workspace.js');
   await load('./crm1-call-console.js');
   await load('./crm1-call-disposition.js');
@@ -22,5 +21,6 @@
   await load('./crm1-lead-workqueue.js');
   await load('./crm1-telephony-bridge-readiness.js');
   /* CRM2 context bridge is no longer loaded; CRM1 is the production workflow. */
-  await load('./crm1-workforce-runtime.js?v=1');
+  await load('./crm1-workforce-runtime.js?v=2');
+  await load('./crm1-workforce-ui-bridge.js?v=2');
 })();
