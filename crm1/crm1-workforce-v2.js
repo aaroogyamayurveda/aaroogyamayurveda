@@ -1,0 +1,147 @@
+/* CRM1 production workforce v2: CSV import, assignment, agent queue and manager control. */
+(function(){
+  'use strict';
+  var sleep=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
+  var db=function(){return window.sb;};
+  var me=null, profile=null;
+  var managerRoles=['super_admin','management','order_manager'];
+  var esc=function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m];});};
+  var day=function(){return new Date().toISOString().slice(0,10);};
+
+  function style(){
+    if(document.getElementById('crm1WorkforceV2Style')) return;
+    var s=document.createElement('style'); s.id='crm1WorkforceV2Style';
+    s.textContent='.crm1wf2-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:16px}.crm1wf2-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.crm1wf2-actions select,.crm1wf2-actions input{padding:9px;border:1px solid #d8dee8;border-radius:9px;background:#fff}.crm1wf2-msg{min-height:20px;margin:8px 0;color:#166534;font-size:13px}.crm1wf2-msg.err{color:#b43b35}.crm1wf2-num{font-size:25px;font-weight:800;color:#164b30}.crm1wf2-mobile{font-weight:700;color:#164b30;text-decoration:underline}.crm1wf2-call{white-space:nowrap}@media(max-width:1000px){.crm1wf2-grid{grid-template-columns:repeat(3,1fr)}}@media(max-width:650px){.crm1wf2-grid{grid-template-columns:1fr 1fr}}';
+    document.head.appendChild(s);
+  }
+  function page(id,title,sub,html){
+    var p=document.getElementById(id);
+    if(!p){p=document.createElement('section');p.id=id;p.className='page';p.innerHTML='<div class="title"><div><h2>'+title+'</h2><div class="sub">'+sub+'</div></div></div>'+html;document.querySelector('.main').appendChild(p);}
+    return p;
+  }
+  function nav(id,label,allowed){
+    var n=document.getElementById('nav'); if(!n||!allowed||document.getElementById('crm1W2Nav_'+id)) return;
+    var b=document.createElement('button'); b.type='button'; b.id='crm1W2Nav_'+id; b.textContent=label;
+    b.onclick=function(){openPage(id);}; n.appendChild(b);
+  }
+  function openPage(id){
+    Array.prototype.forEach.call(document.querySelectorAll('.page'),function(p){p.classList.remove('active');});
+    var p=document.getElementById(id); if(p)p.classList.add('active');
+    Array.prototype.forEach.call(document.querySelectorAll('#nav button'),function(b){b.classList.remove('active');});
+    var b=document.getElementById('crm1W2Nav_'+id); if(b)b.classList.add('active');
+    window.scrollTo(0,0);
+    if(id==='crm1W2Manager') loadManager();
+    if(id==='crm1W2Assignment') {renderAssignment(); loadBatches(); loadAgents();}
+    if(id==='crm1W2Queue') loadQueue();
+  }
+
+  function parseCsv(text){
+    var lines=String(text||'').replace(/\r/g,'').split('\n').filter(function(x){return x.trim();});
+    if(!lines.length) throw new Error('CSV file is empty.');
+    function parseLine(line){var out=[],cur='',q=false,i,c;for(i=0;i<line.length;i++){c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){cur+='"';i++;}else q=!q;}else if(c===','&&!q){out.push(cur.trim());cur='';}else cur+=c;}out.push(cur.trim());return out;}
+    function norm(s){return String(s||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'');}
+    var header=parseLine(lines.shift()).map(norm);
+    function find(){var names=Array.prototype.slice.call(arguments),i,n;for(n=0;n<names.length;n++){i=header.indexOf(norm(names[n]));if(i>=0)return i;}return -1;}
+    var idx={mobile:find('Mobile','Mobile Number','Phone','Phone Number'),name:find('Customer Name','Name','Lead Name'),product:find('Product Name','Product'),address:find('Address','Customer Address'),city:find('City'),state:find('State'),pincode:find('Pincode','Pin Code','PIN','Pin')};
+    if(idx.mobile<0) throw new Error('CSV me Mobile / Mobile Number column nahi mila.');
+    return lines.map(parseLine).map(function(a){return {mobile:String(a[idx.mobile]||'').replace(/\D/g,''),lead_name:a[idx.name]||'',product_name:a[idx.product]||'',address:a[idx.address]||'',city:a[idx.city]||'',state:a[idx.state]||'',pincode:String(a[idx.pincode]||'').replace(/\D/g,''),source:'csv'};});
+  }
+  function sha(value){return crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)).then(function(buf){return Array.prototype.slice.call(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');});}
+
+  function renderManager(){
+    page('crm1W2Manager','Manager Daily Control','Agent attendance, lead allocation, calling work and today\'s orders','<div class="crm1wf2-grid"><div class="stat"><span>Agents Logged In Today</span><div id="crm1W2M_A" class="crm1wf2-num">0</div></div><div class="stat"><span>Assigned Today</span><div id="crm1W2M_B" class="crm1wf2-num">0</div></div><div class="stat"><span>Worked</span><div id="crm1W2M_C" class="crm1wf2-num">0</div></div><div class="stat"><span>Pending</span><div id="crm1W2M_D" class="crm1wf2-num">0</div></div><div class="stat"><span>Callbacks</span><div id="crm1W2M_E" class="crm1wf2-num">0</div></div><div class="stat"><span>Orders Today</span><div id="crm1W2M_F" class="crm1wf2-num">0</div></div></div><div class="panel"><div id="crm1W2M_msg" class="crm1wf2-msg"></div><table><thead><tr><th>Agent</th><th>Assigned</th><th>Worked</th><th>Pending</th><th>Callbacks</th></tr></thead><tbody id="crm1W2M_rows"></tbody></table></div>');
+  }
+  function loadManager(){
+    var d=day(), start=d+'T00:00:00';
+    return Promise.all([
+      db().from('crm_leads').select('id,assigned_to,lead_status,assigned_at,first_contact_at').gte('assigned_at',start),
+      db().from('crm_agent_sessions').select('user_id,login_at').gte('login_at',start),
+      db().from('profiles').select('id,full_name,email').eq('is_active',true).eq('role','agent'),
+      db().from('orders').select('*',{count:'exact',head:true}).gte('created_at',start)
+    ]).then(function(r){
+      var leads=r[0].data||[],sessions=r[1].data||[],agents=r[2].data||[],orders=r[3].count||0;
+      document.getElementById('crm1W2M_A').textContent=(new Set(sessions.map(function(x){return x.user_id;}))).size;
+      document.getElementById('crm1W2M_B').textContent=leads.length;
+      document.getElementById('crm1W2M_C').textContent=leads.filter(function(x){return !!x.first_contact_at||['contacted','followup','qualified','converted','lost'].indexOf(x.lead_status)>=0;}).length;
+      document.getElementById('crm1W2M_D').textContent=leads.filter(function(x){return x.lead_status==='assigned';}).length;
+      document.getElementById('crm1W2M_E').textContent=leads.filter(function(x){return x.lead_status==='followup';}).length;
+      document.getElementById('crm1W2M_F').textContent=orders;
+      var map={};agents.forEach(function(a){map[a.id]={name:a.full_name||a.email,assigned:0,worked:0,pending:0,callback:0};});
+      leads.forEach(function(x){var z=map[x.assigned_to];if(!z)return;z.assigned++;if(x.lead_status==='assigned')z.pending++;else z.worked++;if(x.lead_status==='followup')z.callback++;});
+      document.getElementById('crm1W2M_rows').innerHTML=Object.keys(map).map(function(k){var x=map[k];return '<tr><td>'+esc(x.name)+'</td><td>'+x.assigned+'</td><td>'+x.worked+'</td><td>'+x.pending+'</td><td>'+x.callback+'</td></tr>';}).join('')||'<tr><td colspan="5" class="empty">No agent activity today.</td></tr>';
+    }).catch(function(e){var m=document.getElementById('crm1W2M_msg');if(m){m.textContent=e.message||String(e);m.className='crm1wf2-msg err';}});
+  }
+
+  function renderImport(){
+    page('crm1W2Import','Lead CSV Upload','Import your daily 10-digit customer list into CRM1','<div class="panel"><div class="crm1wf2-actions"><input id="crm1W2_file" type="file" accept=".csv,text/csv"><button class="btn" id="crm1W2_preview">Preview CSV</button></div><div id="crm1W2_importMsg" class="crm1wf2-msg"></div><div id="crm1W2_previewBox"></div></div>');
+    document.getElementById('crm1W2_preview').onclick=preview;
+  }
+  function preview(){
+    var p=document.getElementById('crm1W2Import'),input=document.getElementById('crm1W2_file'),msg=document.getElementById('crm1W2_importMsg'),box=document.getElementById('crm1W2_previewBox'),f=input.files&&input.files[0];
+    if(!f){msg.textContent='Pehle CSV select karein.';msg.className='crm1wf2-msg err';return;}
+    f.text().then(function(text){var rows=parseCsv(text),seen={},valid=[],invalid=[];rows.forEach(function(r){if(!/^[6-9]\d{9}$/.test(r.mobile)||seen[r.mobile])invalid.push(r);else{seen[r.mobile]=1;valid.push(r);}});return sha(f.name+'|'+valid.map(function(x){return [x.mobile,x.lead_name,x.product_name,x.address,x.city,x.state,x.pincode].join('|');}).sort().join('||')).then(function(key){window.crm1W2Import={rows:rows,valid:valid,invalid:invalid,key:key,name:f.name};msg.textContent='Total '+rows.length+' | Valid '+valid.length+' | Invalid/Duplicate '+invalid.length;msg.className='crm1wf2-msg';box.innerHTML='<div class="crm1wf2-actions"><button class="btn" id="crm1W2_import">Import Valid Leads</button></div><div class="tablewrap"><table><thead><tr><th>Mobile</th><th>Customer</th><th>Product</th><th>City</th><th>State</th><th>Pincode</th></tr></thead><tbody>'+valid.slice(0,200).map(function(x){return '<tr><td>'+esc(x.mobile)+'</td><td>'+esc(x.lead_name)+'</td><td>'+esc(x.product_name)+'</td><td>'+esc(x.city)+'</td><td>'+esc(x.state)+'</td><td>'+esc(x.pincode)+'</td></tr>';}).join('')+'</tbody></table></div>';document.getElementById('crm1W2_import').onclick=importValid;});}).catch(function(e){msg.textContent=e.message||String(e);msg.className='crm1wf2-msg err';box.innerHTML='';});
+  }
+  function importValid(){
+    var x=window.crm1W2Import,msg=document.getElementById('crm1W2_importMsg');if(!x)return;
+    db().from('crm_lead_batches').select('id,created_at').eq('source_key',x.key).maybeSingle().then(function(r){if(r.error)throw r.error;if(r.data){msg.textContent='This exact CSV batch is already imported. Duplicate skipped.';return Promise.reject({silent:true});}return db().from('crm_lead_batches').insert({file_name:x.name,source_key:x.key,total_records:x.rows.length,valid_records:x.valid.length,invalid_records:x.invalid.length,uploaded_by:me.id}).select('id').single();}).then(function(r){if(!r)return;var payload=x.valid.map(function(v){return {lead_name:v.lead_name||'Customer',mobile:v.mobile,product_name:v.product_name||null,address:v.address||null,city:v.city||null,state:v.state||null,pincode:v.pincode||null,source:'csv',lead_status:'new',assigned_to:null,batch_id:r.data.id,created_by:me.id,updated_at:new Date().toISOString()};});return db().from('crm_leads').insert(payload).then(function(e){if(e.error)throw e;msg.textContent='Batch imported successfully. '+payload.length+' leads saved.';window.crm1W2Import=null;});}).catch(function(e){if(e&&e.silent)return;msg.textContent=e.message||String(e);msg.className='crm1wf2-msg err';});
+  }
+
+  function loadBatches(){
+    var s=document.getElementById('crm1W2_batch');if(!s)return;db().from('crm_lead_batches').select('id,file_name,created_at,valid_records').order('created_at',{ascending:false}).then(function(r){if(r.error)throw r.error;s.innerHTML='<option value="">Select Batch</option>'+(r.data||[]).map(function(x){return '<option value="'+x.id+'">'+esc(x.file_name)+' — '+new Date(x.created_at).toLocaleString('en-IN')+' ('+x.valid_records+')</option>';}).join('');}).catch(function(e){s.innerHTML='<option>'+esc(e.message||e)+'</option>';});
+  }
+  function loadAgents(){
+    var s=document.getElementById('crm1W2_agent');if(!s)return;db().from('profiles').select('id,full_name,email').eq('is_active',true).eq('role','agent').order('full_name').then(function(r){if(r.error)throw r.error;s.innerHTML='<option value="">Select Agent</option>'+(r.data||[]).map(function(x){return '<option value="'+x.id+'">'+esc(x.full_name||x.email)+'</option>';}).join('');}).catch(function(e){s.innerHTML='<option>'+esc(e.message||e)+'</option>';});
+  }
+  function renderAssignment(){
+    page('crm1W2Assignment','Lead Assignment','Select a batch, select an agent, then assign today\'s calls','<div class="panel"><div class="crm1wf2-actions"><select id="crm1W2_batch"><option value="">Loading...</option></select><select id="crm1W2_agent"><option value="">Loading...</option></select><button class="btn" id="crm1W2_load">Load Leads</button><button class="btn" id="crm1W2_assign">Assign Selected</button></div><div id="crm1W2_assignMsg" class="crm1wf2-msg"></div><div id="crm1W2_assignTable"></div></div>');
+    document.getElementById('crm1W2_load').onclick=loadUnassigned;document.getElementById('crm1W2_assign').onclick=assignSelected;
+  }
+  function loadUnassigned(){
+    var batch=document.getElementById('crm1W2_batch').value,box=document.getElementById('crm1W2_assignTable');if(!batch){box.innerHTML='<div class="empty">Select a batch first.</div>';return;}
+    db().from('crm_leads').select('id,mobile,lead_name,product_name,city,state,pincode,lead_status').eq('batch_id',batch).is('assigned_to',null).in('lead_status',['new','assigned']).order('created_at',{ascending:true}).limit(1000).then(function(r){if(r.error)throw r.error;var data=r.data||[];box.innerHTML='<p>'+data.length+' unassigned leads</p><table><thead><tr><th><input type="checkbox" id="crm1W2_all"></th><th>Mobile</th><th>Customer</th><th>Product</th><th>City</th><th>State</th></tr></thead><tbody>'+data.map(function(x){return '<tr><td><input class="crm1W2_check" type="checkbox" value="'+x.id+'"></td><td>'+esc(x.mobile)+'</td><td>'+esc(x.lead_name)+'</td><td>'+esc(x.product_name||'')+'</td><td>'+esc(x.city||'')+'</td><td>'+esc(x.state||'')+'</td></tr>';}).join('')+'</tbody></table>';document.getElementById('crm1W2_all').onchange=function(e){Array.prototype.forEach.call(document.querySelectorAll('.crm1W2_check'),function(c){c.checked=e.target.checked;});};}).catch(function(e){box.innerHTML='<div class="crm1wf2-msg err">'+esc(e.message||e)+'</div>';});
+  }
+  function assignSelected(){
+    var agent=document.getElementById('crm1W2_agent').value,ids=Array.prototype.map.call(document.querySelectorAll('.crm1W2_check:checked'),function(x){return x.value;}),msg=document.getElementById('crm1W2_assignMsg');
+    if(!agent){msg.textContent='Select Agent first.';msg.className='crm1wf2-msg err';return;}if(!ids.length){msg.textContent='Select at least one lead.';msg.className='crm1wf2-msg err';return;}
+    var now=new Date().toISOString();db().from('crm_leads').update({assigned_to:agent,assigned_at:now,lead_status:'assigned',updated_at:now}).in('id',ids).then(function(r){if(r.error)throw r.error;return db().from('crm_lead_assignments').insert(ids.map(function(id){return {lead_id:id,agent_id:agent,assigned_by:me.id,assignment_date:day(),status:'assigned'};}));}).then(function(r){if(r.error)throw r.error;msg.textContent=ids.length+' leads assigned successfully.';msg.className='crm1wf2-msg';loadUnassigned();}).catch(function(e){msg.textContent=e.message||String(e);msg.className='crm1wf2-msg err';});
+  }
+
+  function loadQueue(){
+    var box=document.getElementById('crm1W2_queueTable'),msg=document.getElementById('crm1W2_queueMsg');if(!box)return;
+    db().from('crm_leads').select('id,customer_id,mobile,lead_name,product_name,address,city,state,pincode,lead_status,assigned_at,first_contact_at,last_contact_at,next_followup_at').eq('assigned_to',me.id).in('lead_status',['assigned','contacted','followup','qualified']).order('assigned_at',{ascending:true}).then(function(r){if(r.error)throw r.error;var data=r.data||[];msg.textContent=data.length+' active leads in your queue.';box.innerHTML='<table><thead><tr><th>Mobile</th><th>Customer</th><th>Product</th><th>City</th><th>State</th><th>Status</th><th>Action</th></tr></thead><tbody>'+data.map(function(x){return '<tr><td><span class="crm1wf2-mobile">'+esc(x.mobile)+'</span></td><td>'+esc(x.lead_name||'')+'</td><td>'+esc(x.product_name||'')+'</td><td>'+esc(x.city||'')+'</td><td>'+esc(x.state||'')+'</td><td><span class="pill">'+esc(x.lead_status||'')+'</span></td><td><button class="btn crm1wf2-call" data-id="'+x.id+'">Open Customer</button></td></tr>';}).join('')||'<tr><td colspan="7" class="empty">No leads assigned.</td></tr>';Array.prototype.forEach.call(box.querySelectorAll('.crm1wf2-call'),function(b){b.onclick=function(){openLead(b.getAttribute('data-id'));};});}).catch(function(e){msg.textContent=e.message||String(e);msg.className='crm1wf2-msg err';});
+  }
+  function applyContext(c){
+    var f=document.getElementById('createOrderPageForm');if(!f)return Promise.resolve();
+    function set(el,v){if(el&&v!=null){el.value=String(v);el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true));}}
+    set(f.elements.customer_name,c.customer_name);set(document.getElementById('pageMobile'),c.mobile);set(document.getElementById('orderPincode'),c.pincode);set(f.elements.address,c.address);
+    if(window.crm1SetCallContext)window.crm1SetCallContext({lead_id:c.lead_id,customer_id:c.customer_id});
+    var badge=document.getElementById('crm1W2LeadBadge');if(!badge){badge=document.createElement('div');badge.id='crm1W2LeadBadge';badge.style.cssText='margin:0 0 14px;padding:11px 13px;border-radius:10px;background:#edf5ea;color:#164b30;border:1px solid #d8e7d3;font-size:13px;font-weight:700;';f.insertBefore(badge,f.firstChild);}badge.textContent='Calling Queue Lead • '+(c.mobile||'')+(c.customer_name?' • '+c.customer_name:'')+(c.product_name?' • '+c.product_name:'');
+    return pickProduct(c.product_name).then(function(){
+      var st=document.getElementById('orderState'),city=document.getElementById('orderCity');
+      if(!st||!c.state)return;var so=Array.prototype.find.call(st.options,function(o){return o.text.trim().toLowerCase()===String(c.state).trim().toLowerCase()||o.value===c.state;});
+      if(so){st.value=so.value;st.dispatchEvent(new Event('change',{bubbles:true}));return sleep(400).then(function(){if(!city||!c.city)return;var co=Array.prototype.find.call(city.options,function(o){return o.text.trim().toLowerCase()===String(c.city).trim().toLowerCase()||o.value===c.city;});if(co){city.value=co.value;city.dispatchEvent(new Event('change',{bubbles:true));}});}
+    });
+  }
+  function pickProduct(name){if(!name)return Promise.resolve();var s=document.getElementById('pageProduct');if(!s)return Promise.resolve();var count=0;return new Promise(function(resolve){function go(){var o=Array.prototype.find.call(s.options,function(opt){return String(opt.textContent||'').toLowerCase().indexOf(String(name).toLowerCase())>=0;});if(o){s.value=o.value;s.dispatchEvent(new Event('change',{bubbles:true}));resolve();return;}if(count++>30){resolve();return;}setTimeout(go,200);}go();});}
+  function openLead(id){
+    db().from('crm_leads').select('*').eq('id',id).single().then(function(r){if(r.error)throw r.error;var lead=r.data,now=new Date().toISOString();return db().from('crm_leads').update({lead_status:'contacted',first_contact_at:lead.first_contact_at||now,last_contact_at:now,updated_at:now}).eq('id',id).then(function(){var c={lead_id:lead.id,customer_id:lead.customer_id||null,customer_name:lead.lead_name,mobile:lead.mobile,product_name:lead.product_name,pincode:lead.pincode,address:lead.address,city:lead.city,state:lead.state};sessionStorage.setItem('crm1_work_queue_context',JSON.stringify(c));var p=document.getElementById('createOrderPage');if(p){Array.prototype.forEach.call(document.querySelectorAll('.page'),function(x){x.classList.remove('active');});p.classList.add('active');p.scrollIntoView({block:'start'});}return sleep(250).then(function(){return applyContext(c);});});}).catch(function(e){alert('Lead open failed: '+(e.message||e));});
+  }
+  function renderQueue(){page('crm1W2Queue','Today\'s Calling Queue','Customers assigned to you for manual outbound calling','<div class="panel"><div id="crm1W2_queueMsg" class="crm1wf2-msg"></div><div id="crm1W2_queueTable"></div></div>');}
+
+  function session(){
+    if(!me||!profile)return Promise.resolve();
+    if(profile.role==='super_admin')return Promise.resolve();
+    var k='crm1workforce:'+me.id+':'+day(),sid=localStorage.getItem(k);if(!sid){sid=crypto.randomUUID();localStorage.setItem(k,sid);}
+    return db().from('crm_agent_sessions').upsert({user_id:me.id,session_key:sid,last_seen_at:new Date().toISOString(),logout_at:null},{onConflict:'session_key'}).then(function(){setInterval(function(){db().from('crm_agent_sessions').update({last_seen_at:new Date().toISOString(),logout_at:null}).eq('session_key',sid);},60000);});
+  }
+
+  function boot(){
+    if(!window.sb){setTimeout(boot,250);return;}
+    db().auth.getUser().then(function(r){if(!r.data.user)return;me=r.data.user;return db().from('profiles').select('id,full_name,email,role,is_active').eq('id',me.id).maybeSingle();}).then(function(r){if(!r||r.error||!r.data)return;profile=r.data;style();return session();}).then(function(){
+      if(!profile)return;var isManager=managerRoles.indexOf(profile.role)>=0;nav('crm1W2Manager','📊 Manager Control',isManager);nav('crm1W2Import','📥 Lead Import',isManager);nav('crm1W2Assignment','👥 Lead Assignment',isManager);nav('crm1W2Queue','📞 Today\'s Calling Queue',['agent','management','order_manager','super_admin'].indexOf(profile.role)>=0);
+      renderManager();renderImport();renderAssignment();renderQueue();
+      window.addEventListener('crm1DataChanged',function(){loadQueue();if(isManager)loadManager();});
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
