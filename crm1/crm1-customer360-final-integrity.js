@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 var started=false,lastMobile='',rendering=false;
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])})}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]})}
 function fmt(v){return v?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium',timeStyle:'short'}).format(new Date(v)):'-'}
 function getMobile(){
  var nodes=[document.getElementById('crm360Result'),document.querySelector('.main .page.active'),document.querySelector('.main')];
@@ -10,14 +10,15 @@ function getMobile(){
  return '';
 }
 function root(){return document.getElementById('crm360Result')||document.querySelector('.main .page.active')||document.querySelector('.main')}
-function style(){if(document.getElementById('crm1C360TimelineStyle'))return;var s=document.createElement('style');s.id='crm1C360TimelineStyle';s.textContent='.crm1-c360-integrity{margin-top:18px}.crm1-c360-integrity table{width:100%;border-collapse:collapse;font-size:12px}.crm1-c360-integrity th,.crm1-c360-integrity td{text-align:left;padding:9px;border-bottom:1px solid #edf1ee;vertical-align:top}.crm1-c360-integrity th{color:#164b30;background:#f7faf7}.crm1-c360-integrity .evt{font-weight:800;color:#164b30}.crm1-c360-integrity .muted{color:#69756e;font-size:12px}.crm1-c360-error{color:#b43b35;font-size:13px}';document.head.appendChild(s)}
+function style(){if(document.getElementById('crm1C360TimelineStyle'))return;var s=document.createElement('style');s.id='crm1C360TimelineStyle';s.textContent='.crm1-c360-integrity{margin-top:18px;margin-bottom:18px}.crm1-c360-integrity table{width:100%;border-collapse:collapse;font-size:12px}.crm1-c360-integrity th,.crm1-c360-integrity td{text-align:left;padding:9px;border-bottom:1px solid #edf1ee;vertical-align:top}.crm1-c360-integrity th{color:#164b30;background:#f7faf7}.crm1-c360-integrity .evt{font-weight:800;color:#164b30}.crm1-c360-integrity .muted{color:#69756e;font-size:12px}.crm1-c360-error{color:#b43b35;font-size:13px}';document.head.appendChild(s)}
+function place(box,host){var panels=host.querySelectorAll('.panel');if(panels.length){panels[0].parentNode.insertBefore(box,panels[0])}else{host.appendChild(box)}}
 async function render(mobile){
  if(rendering||!window.sb||!mobile)return;
  var host=root();if(!host)return;
  if(lastMobile===mobile&&document.getElementById('crm1C360CompleteTimeline'))return;
  rendering=true;lastMobile=mobile;style();
  var old=document.getElementById('crm1C360CompleteTimeline');if(old)old.remove();
- var box=document.createElement('div');box.id='crm1C360CompleteTimeline';box.className='panel crm1-c360-integrity';box.innerHTML='<h3>Complete Activity Timeline</h3><div class="muted">Loading lead, calls, follow-ups, orders and order-status history…</div>';host.appendChild(box);
+ var box=document.createElement('div');box.id='crm1C360CompleteTimeline';box.className='panel crm1-c360-integrity';box.innerHTML='<h3>Complete Activity Timeline</h3><div class="muted">Loading lead, calls, follow-ups, orders and order-status history…</div>';place(box,host);
  try{
   var cust=(await window.sb.from('customers').select('id,customer_name').eq('mobile',mobile).maybeSingle()).data||null,cid=cust&&cust.id;
   var leadP=window.sb.from('crm_leads').select('id,lead_name,lead_status,product_name,conversion_order_id,created_at,updated_at').eq('mobile',mobile).order('created_at',{ascending:false});
