@@ -32,6 +32,6 @@
   await load('./crm1-agent-performance-detailed.js?v=2');
   await load('./crm1-partner-performance-final.js?v=4');
   await load('./crm1-advanced-reports-detailed.js?v=1');
-  await load('./crm1-settlements-detailed.js?v=1');
+  await load('./crm1-settlements-detailed.js?v=2');
   /* Customer 360 is now normalized at source; the DOM cleanup module is intentionally not loaded. */
 })();
