@@ -4,7 +4,6 @@
   var started=false,guardInstalled=false,timer=null;
   var $=function(id){return document.getElementById(id)};
   var esc=function(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]})};
-  var money=function(v){return '₹'+Number(v||0).toLocaleString('en-IN')};
   var today=function(){return new Date().toISOString().slice(0,10)};
   var nextDay=function(v){var d=new Date(v+'T00:00:00');d.setDate(d.getDate()+1);return d.toISOString().slice(0,10)};
   function page(){return $('qa')}
@@ -31,7 +30,7 @@
     var body=$('crm1QABody');if(!body)return; body.innerHTML='<tr><td colspan="7" class="empty">Loading...</td></tr>';
     var from=$('crm1QAFrom')?.value||today(),to=$('crm1QATo')?.value||from;if(to<from){var z=from;from=to;to=z;$('crm1QAFrom').value=from;$('crm1QATo').value=to}
     try{
-      var q=window.sb.from('qa_reviews').select('id,agent_id,reviewed_by,reviewer_id,order_id,score,remarks,created_at,disposition,reviewer_note,reviewed_at,profiles:agent_id(full_name),reviewer:reviewed_by(full_name),reviewer2:reviewer_id(full_name)').gte('created_at',from+'T00:00:00').lt('created_at',nextDay(to));
+      var q=window.sb.from('qa_reviews').select('id,agent_id,reviewed_by,order_id,score,remarks,created_at,disposition,reviewer_note,reviewed_at,profiles:agent_id(full_name),reviewer:reviewed_by(full_name)').gte('created_at',from+'T00:00:00').lt('created_at',nextDay(to));
       var agent=$('crm1QAAgent')?.value||'',disp=$('crm1QADisp')?.value||'';if(agent)q=q.eq('agent_id',agent);if(disp)q=q.eq('disposition',disp);
       var r=await q.order('created_at',{ascending:false}).limit(1000);if(r.error)throw r.error;var rows=r.data||[];
       var scores=rows.map(function(x){return Number(x.score)}).filter(function(x){return Number.isFinite(x)});var avg=scores.length?scores.reduce(function(a,b){return a+b},0)/scores.length:0;
@@ -40,7 +39,7 @@
       var map={}; rows.forEach(function(x){var id=x.agent_id||'unassigned',name=x.profiles?.full_name||'Unassigned';if(!map[id])map[id]={name:name,reviews:0,total:0,pass:0,fail:0};map[id].reviews++;var sc=Number(x.score);if(Number.isFinite(sc)){map[id].total+=sc;if(sc>=80)map[id].pass++;else map[id].fail++}});
       var agents=Object.keys(map).map(function(k){var x=map[k];return {name:x.name,reviews:x.reviews,avg:x.reviews&&x.total?x.total/x.reviews:0,pass:x.pass,fail:x.fail,passPct:x.reviews?x.pass/x.reviews*100:0}}).sort(function(a,b){return b.avg-a.avg||b.passPct-a.passPct||b.reviews-a.reviews});
       $('crm1QAAgentBody').innerHTML=agents.map(function(x,i){return '<tr><td><b>'+(i+1)+'</b></td><td><b>'+esc(x.name)+'</b></td><td>'+x.reviews+'</td><td>'+x.avg.toFixed(1)+'</td><td>'+x.pass+'</td><td>'+x.fail+'</td><td>'+x.passPct.toFixed(1)+'%</td></tr>'}).join('')||'<tr><td colspan="7" class="empty">No QA reviews for selected period</td></tr>';
-      body.innerHTML=rows.map(function(x){var date=x.reviewed_at||x.created_at;return '<tr><td>'+esc(date?new Date(date).toLocaleString('en-IN'):'-')+'</td><td>'+esc(x.profiles?.full_name||'-')+'</td><td>'+(x.order_id?esc(String(x.order_id).slice(0,8)):'-')+'</td><td><b>'+esc(x.score??'-')+'</b></td><td>'+esc(x.disposition||'-')+'</td><td>'+esc(x.reviewer?.full_name||x.reviewer2?.full_name||'-')+'</td><td>'+esc(x.reviewer_note||x.remarks||'-')+'</td></tr>'}).join('')||'<tr><td colspan="7" class="empty">No QA reviews for selected period</td></tr>';
+      body.innerHTML=rows.map(function(x){var date=x.reviewed_at||x.created_at;return '<tr><td>'+esc(date?new Date(date).toLocaleString('en-IN'):'-')+'</td><td>'+esc(x.profiles?.full_name||'-')+'</td><td>'+(x.order_id?esc(String(x.order_id).slice(0,8)):'-')+'</td><td><b>'+esc(x.score??'-')+'</b></td><td>'+esc(x.disposition||'-')+'</td><td>'+esc(x.reviewer?.full_name||'-')+'</td><td>'+esc(x.reviewer_note||x.remarks||'-')+'</td></tr>'}).join('')||'<tr><td colspan="7" class="empty">No QA reviews for selected period</td></tr>';
     }catch(e){body.innerHTML='<tr><td colspan="7" class="msg">QA report error: '+esc(e.message||e)+'</td></tr>';$('crm1QAAgentBody').innerHTML=''}
   }
   function installGuard(){var c=content();if(!c||!window.MutationObserver||guardInstalled)return;guardInstalled=true;var obs=new MutationObserver(function(){var p=page();if(!p||!p.classList.contains('active'))return;if($('crm1QADetailedRoot'))return;clearTimeout(timer);timer=setTimeout(function(){var pp=page();if(pp&&pp.classList.contains('active')&&!$('crm1QADetailedRoot'))build()},40)});obs.observe(c,{childList:true,subtree:true});c._crm1QAObserver=obs}
