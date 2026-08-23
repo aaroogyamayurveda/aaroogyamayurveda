@@ -39,13 +39,11 @@
   var modules=[
     './advanced-business-layer.core.js',
     './crm1-followup-verification-fix.js',
-    './crm1-pin-auto-assignment.js?v=1',
     './crm1-followups-queue-fix.js',
     './crm1-followup-customer-context-fix.js?v=2',
     './crm1-agent-workspace.js',
     './crm1-call-console.js?v=2',
     './crm1-call-disposition.js',
-    './crm1-call-conversion-finalizer.js?v=1',
     './crm1-lead-call-bridge.js',
     './crm1-lead-workqueue.js',
     './crm1-telephony-bridge-readiness.js',
