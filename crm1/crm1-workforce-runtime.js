@@ -54,7 +54,7 @@
     if(c360Started||!window.sb)return;
     window.sb.auth.getUser().then(function(r){
       if(!r||!r.data||!r.data.user||c360Started)return;c360Started=true;
-      var s=document.createElement('script');s.src='./crm1-customer360-final-integrity.js?v=1';s.async=false;
+      var s=document.createElement('script');s.src='./crm1-customer360-final-integrity.js?v=2';s.async=false;
       s.onload=function(){window.dispatchEvent(new CustomEvent('crm1Customer360IntegrityReady'));};s.onerror=function(){console.warn('CRM1 Customer 360 integrity module failed to load');c360Started=false;};document.head.appendChild(s);
     }).catch(function(){});
   }
