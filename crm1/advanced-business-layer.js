@@ -22,7 +22,6 @@
   await load('./crm1-lead-call-bridge.js');
   await load('./crm1-lead-workqueue.js');
   await load('./crm1-telephony-bridge-readiness.js');
-  /* CRM2 context bridge is no longer loaded; CRM1 is the production workflow. */
   await load('./crm1-workforce-runtime.js?v=2');
   await load('./crm1-workforce-ui-bridge.js?v=2');
   await load('./crm1-followup-lead-status-sync.js?v=1');
@@ -30,5 +29,5 @@
   await load('./crm1-manager-reports.js?v=1');
   await load('./crm1-order-timeline.js?v=4');
   await load('./crm1-delivery-workflow.js?v=1');
-  await load('./crm1-customer360-timeline-cleanup.js?v=1');
+  await load('./crm1-customer360-timeline-cleanup.js?v=2');
 })();
