@@ -1,8 +1,7 @@
-/* CRM1 Customer360 timeline cleanup: removes duplicate synthetic status-history rows and fills Order Type. */
+/* CRM1 Customer360 timeline cleanup: normalizes duplicate status rows, creation status and order type. */
 (function(){
   'use strict';
   var started=false;
-  function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'})[m]})}
   function getMobile(){
     var inputs=document.querySelectorAll('input');
     for(var i=0;i<inputs.length;i++){
@@ -21,21 +20,22 @@
     var seen={};
     rows.forEach(function(row){
       var cells=row.cells;if(!cells||cells.length<5)return;
+      var event=String(cells[1].textContent||'').trim();
       var status=String(cells[2].textContent||'').trim();
       var order=String(cells[3].textContent||'').trim();
       var dt=String(cells[0].textContent||'').trim();
-      var details=String(cells[4].textContent||'').trim();
+      /* Creation event must always show the initial order status, never the current status. */
+      if(event==='Order Created') cells[2].textContent='new';
       var m=status.match(/^(.+)\s*→\s*(.+)$/);
       if(!m)return;
       var old=m[1].trim(),nxt=m[2].trim();
       var key=order+'|'+dt+'|'+nxt;
-      if(!seen[key]){seen[key]={row:row,old:old,details:details};return;}
+      if(!seen[key]){seen[key]={row:row,old:old};return;}
       var prior=seen[key];
-      /* When both synthetic (— → status) and real (previous → status) rows exist,
-         keep the real transition. For exact duplicate real transitions, keep one. */
       var priorSynthetic=(prior.old==='—'||prior.old==='-');
       var currentSynthetic=(old==='—'||old==='-');
-      if(priorSynthetic&&!currentSynthetic){prior.row.remove();seen[key]={row:row,old:old,details:details};}
+      /* Keep the real old->new transition and remove only its synthetic duplicate. */
+      if(priorSynthetic&&!currentSynthetic){prior.row.remove();seen[key]={row:row,old:old};}
       else if(!priorSynthetic&&currentSynthetic){row.remove();}
       else{row.remove();}
     });
@@ -45,34 +45,25 @@
     var mobile=getMobile();if(!mobile||!window.sb)return;
     var box=document.getElementById('crm1C360CompleteTimeline');if(!box)return;
     var table=box.querySelector('table');if(!table||!table.tBodies[0])return;
-    var headers=[].slice.call(table.tHead?.rows?.[0]?.cells||[]);
+    var headers=[].slice.call((table.tHead&&table.tHead.rows&&table.tHead.rows[0]&&table.tHead.rows[0].cells)||[]);
     var typeIndex=headers.findIndex(function(h){return /order type/i.test(h.textContent||'')});
-    if(typeIndex<0)return;
     var cr=await window.sb.from('customers').select('id').eq('mobile',mobile).maybeSingle();
     if(cr.error||!cr.data)return;
     var or=await window.sb.from('orders').select('id,order_no,order_type,order_priority').eq('customer_id',cr.data.id).order('created_at',{ascending:false});
     if(or.error)return;
     var types={};(or.data||[]).forEach(function(o){types['#'+o.order_no]=o.order_type||o.order_priority||'-'});
     [].slice.call(table.tBodies[0].rows).forEach(function(row){
-      var order=String(row.cells[3]?.textContent||'').trim();
-      if(types[order])row.cells[typeIndex].textContent=types[order];
+      var order=String(row.cells[3]&&row.cells[3].textContent||'').trim();
+      if(typeIndex>=0 && types[order]) row.cells[typeIndex].textContent=types[order];
     });
   }
   function run(){
-    var ok=cleanTimeline();
-    if(ok)fillOrderType().catch(function(){});
-    return ok;
+    if(cleanTimeline())fillOrderType().catch(function(){});
   }
   function start(){
     if(started)return;started=true;
-    var tries=0,t=setInterval(function(){
-      var m=getMobile();
-      if(m)run();
-      if(++tries>180)clearInterval(t);
-    },500);
-    var mo=new MutationObserver(function(){
-      var m=getMobile();if(m)run();
-    });
+    var tries=0,t=setInterval(function(){if(getMobile())run();if(++tries>180)clearInterval(t)},500);
+    var mo=new MutationObserver(function(){if(getMobile())run()});
     mo.observe(document.body,{childList:true,subtree:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
