@@ -40,10 +40,7 @@
     var s=$('crm1QADisp');if(!s)return;try{var r=await window.sb.from('qa_reviews').select('disposition').not('disposition','is',null).order('disposition');if(r.error)throw r.error;var vals=[...new Set((r.data||[]).map(function(x){return x.disposition}).filter(Boolean))];s.innerHTML='<option value="">All Dispositions</option>'+vals.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>'}).join('')}catch(e){s.innerHTML='<option value="">All Dispositions</option>'}}
   async function loadOrdersForForm(){
     var s=$('crm1QAFormOrder');if(!s)return;try{var r=await window.sb.from('orders').select('id,order_no,order_status,customers(customer_name)').order('order_date',{ascending:false}).limit(300);if(r.error)throw r.error;s.innerHTML='<option value="">No Order</option>'+(r.data||[]).map(function(x){var label='#'+x.order_no+' · '+(x.customers?.customer_name||'-')+' · '+(x.order_status||'-');return '<option value="'+esc(x.id)+'">'+esc(label)+'</option>'}).join('')}catch(e){s.innerHTML='<option value="">Unable to load orders</option>'}}
-  function openForm(){
-    $('crm1QAFormPanel').classList.remove('hidden');
-    $('crm1QAFormPanel').scrollIntoView({behavior:'smooth',block:'center'});
-  }
+  function openForm(){ $('crm1QAFormPanel').classList.remove('hidden'); $('crm1QAFormPanel').scrollIntoView({behavior:'smooth',block:'center'}); }
   function closeForm(){
     $('crm1QAFormPanel')?.classList.add('hidden');
     if($('crm1QAFormScore'))$('crm1QAFormScore').value='';
@@ -58,14 +55,13 @@
     if(score===''||score==null||Number(score)<0||Number(score)>100)return alert('Score must be between 0 and 100');
     var btn=$('crm1QASave');btn.disabled=true;btn.textContent='Saving...';
     try{
-      var me=null;try{var u=await window.sb.auth.getUser();me=u.data?.user||null}catch(e){}
-      var payload={agent_id:agent,reviewed_by:me?.id||null,reviewer_id:me?.id||null,order_id:order,score:Number(score),remarks:remarks,disposition:disp,reviewer_note:remarks,reviewed_at:new Date().toISOString()};
-      var r=await window.sb.from('qa_reviews').insert(payload);
-      if(r.error){
-        var p2={agent_id:agent,reviewed_by:me?.id||null,order_id:order,score:Number(score),remarks:remarks,disposition:disp,reviewer_note:remarks,reviewed_at:new Date().toISOString()};
-        var r2=await window.sb.from('qa_reviews').insert(p2);if(r2.error)throw r2.error;
-      }
-      closeForm();load();alert('QA review saved successfully');
+      var r=await window.sb.rpc('crm1_create_qa_review',{p_agent_id:agent,p_order_id:order,p_score:Number(score),p_disposition:disp,p_remarks:remarks});
+      if(r.error)throw r.error;
+      var result=r.data||{};
+      if(!result.ok)throw new Error(result.reason||'QA review could not be saved');
+      closeForm();
+      await load();
+      alert('QA review saved successfully');
     }catch(e){alert(e.message||e)}finally{btn.disabled=false;btn.textContent='Save Review'}
   }
   async function load(){
