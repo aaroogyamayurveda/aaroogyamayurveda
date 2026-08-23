@@ -10,9 +10,9 @@ function today(){return iso(new Date())}
 function nextDay(v){var d=new Date(v+'T00:00:00');d.setDate(d.getDate()+1);return iso(d)}
 function page(){return document.getElementById('partnerPerformance')}
 function content(){return document.getElementById('partnerPerformanceContent')}
+function normalizeHeader(){var p=page();if(!p)return;var h=p.querySelector('.title h2');if(h)h.textContent='Delivery Partners Performance';var s=p.querySelector('.title .sub');if(s)s.textContent='Dealer and courier performance and SLA'}
 function build(){
- var p=page(),c=content();if(!p||!c||!p.classList.contains('active'))return false;
- if(document.getElementById('crm1PPFinalRoot'))return true;
+ var p=page(),c=content();if(!p||!c||!p.classList.contains('active'))return false;normalizeHeader();
  c.innerHTML='<div id="crm1PPFinalRoot"><div class="panel"><div class="crm1-toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label>From <input type="date" id="crm1PPFrom"></label><label>To <input type="date" id="crm1PPTo"></label><button class="btn" id="crm1PPApply">Apply</button><button class="btn alt" id="crm1PPToday">Today</button></div><div id="crm1PPMsg" class="sub"></div></div><div id="crm1PPStats" class="cards"></div><div class="panel"><div class="tablewrap"><table><thead><tr><th>Rank</th><th>Delivery Partner</th><th>Type</th><th>Assigned</th><th>In Progress</th><th>Delivered</th><th>RTO</th><th>Cancelled</th><th>Delivery %</th><th>Order Value</th><th>Revenue</th></tr></thead><tbody id="crm1PPBody"></tbody></table></div></div></div>';
  var t=today();document.getElementById('crm1PPFrom').value=t;document.getElementById('crm1PPTo').value=t;
  document.getElementById('crm1PPApply').onclick=load;document.getElementById('crm1PPToday').onclick=function(){document.getElementById('crm1PPFrom').value=today();document.getElementById('crm1PPTo').value=today();load()};load();return true;
@@ -46,6 +46,6 @@ async function load(){
   msg.textContent='Report: '+from+' to '+to;
  }catch(e){msg.textContent='Report error: '+(e.message||e);document.getElementById('crm1PPBody').innerHTML=''}
 }
-function init(){if(started)return;started=true;var tries=0,t=setInterval(function(){if(build()&&page().classList.contains('active'))clearInterval(t);if(++tries>120)clearInterval(t)},500);document.addEventListener('click',function(e){if(e.target.closest('#nav button'))setTimeout(function(){if(page()&&page().classList.contains('active')){var c=content();if(c)c.innerHTML='';build()}},300)})}
+function init(){if(started)return;started=true;var tries=0,t=setInterval(function(){var p=page();if(p&&p.classList.contains('active')){build();clearInterval(t)}if(++tries>120)clearInterval(t)},500);document.addEventListener('click',function(e){if(e.target.closest('#nav button'))setTimeout(function(){var p=page();if(p&&p.classList.contains('active'))build()},300)})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
