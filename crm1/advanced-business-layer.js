@@ -36,8 +36,6 @@
   await load('./crm1-settlements-detailed.js?v=3');
   await load('./crm1-pin-rules-detailed.js?v=1');
   await load('./crm1-inventory-detailed.js?v=1');
-  await load('./crm1-qa-detailed.js?v=4');
-  await load('./crm1-qa-report-fix.js?v=1');
-  await load('./crm1-qa-watchdog.js?v=1');
+  await load('./crm1-qa-detailed.js?v=5');
   /* Customer 360 is now normalized at source; the DOM cleanup module is intentionally not loaded. */
 })();
