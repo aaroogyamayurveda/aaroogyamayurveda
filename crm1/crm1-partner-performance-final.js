@@ -1,7 +1,7 @@
 /* CRM1 Partner Performance final reporting layer: date-range, revenue ranking, delivered value. */
 (function(){
 'use strict';
-var started=false;
+var started=false,guardInstalled=false,guardTimer=null;
 function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]})}
 function money(v){return '₹'+Number(v||0).toLocaleString('en-IN')}
 function fmtPct(a,b){return b?(a/b*100).toFixed(1)+'%':'0.0%'}
@@ -22,11 +22,13 @@ function build(){
  normalizeNav();normalizeHeader();
  c.innerHTML='<div id="crm1PPFinalRoot"><div class="panel"><div class="crm1-toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label>From <input type="date" id="crm1PPFrom"></label><label>To <input type="date" id="crm1PPTo"></label><button class="btn" id="crm1PPApply">Apply</button><button class="btn alt" id="crm1PPToday">Today</button></div><div id="crm1PPMsg" class="sub"></div></div><div id="crm1PPStats" class="cards"></div><div class="panel"><div class="tablewrap"><table><thead><tr><th>Rank</th><th>Delivery Partner</th><th>Type</th><th>Assigned</th><th>In Progress</th><th>Delivered</th><th>RTO</th><th>Cancelled</th><th>Delivery %</th><th>Order Value</th><th>Revenue</th></tr></thead><tbody id="crm1PPBody"></tbody></table></div></div></div>';
  var t=today();document.getElementById('crm1PPFrom').value=t;document.getElementById('crm1PPTo').value=t;
- document.getElementById('crm1PPApply').onclick=load;document.getElementById('crm1PPToday').onclick=function(){document.getElementById('crm1PPFrom').value=today();document.getElementById('crm1PPTo').value=today();load()};
+ document.getElementById('crm1PPApply').onclick=load;
+ document.getElementById('crm1PPToday').onclick=function(){document.getElementById('crm1PPFrom').value=today();document.getElementById('crm1PPTo').value=today();load()};
  load();return true;
 }
 async function load(){
- var from=document.getElementById('crm1PPFrom').value||today(),to=document.getElementById('crm1PPTo').value||from;if(to<from){var z=from;from=to;to=z;document.getElementById('crm1PPFrom').value=from;document.getElementById('crm1PPTo').value=to}
+ var from=document.getElementById('crm1PPFrom').value||today(),to=document.getElementById('crm1PPTo').value||from;
+ if(to<from){var z=from;from=to;to=z;document.getElementById('crm1PPFrom').value=from;document.getElementById('crm1PPTo').value=to}
  var msg=document.getElementById('crm1PPMsg');if(!msg)return;msg.textContent='Loading...';
  var end=nextDay(to);
  try{
@@ -40,7 +42,8 @@ async function load(){
   var dm=new Map(dealers.map(function(x){return[x.id,x.dealer_name||x.id]})),cm=new Map(couriers.map(function(x){return[x.id,x.full_name||x.id]})),map={};
   orders.filter(function(o){return !String(o.remarks||'').includes('[ENQUIRY]')}).forEach(function(o){
    var type=o.dealer_id?'Dealer':'Courier',id=o.dealer_id||o.courier_manager_id;if(!id)return;
-   var key=type+':'+id;if(!map[key])map[key]={name:type==='Dealer'?dm.get(id):cm.get(id)||id,type:type,assigned:0,inprogress:0,delivered:0,rto:0,cancelled:0,orderValue:0,revenue:0};
+   var key=type+':'+id;
+   if(!map[key])map[key]={name:type==='Dealer'?dm.get(id):cm.get(id)||id,type:type,assigned:0,inprogress:0,delivered:0,rto:0,cancelled:0,orderValue:0,revenue:0};
    var x=map[key];x.assigned++;x.orderValue+=Number(o.total_amount||0);
    if(o.order_status==='delivered'){x.delivered++;x.revenue+=Number(o.total_amount||0)}
    else if(o.order_status==='rto')x.rto++;
@@ -54,14 +57,42 @@ async function load(){
   msg.textContent='Report: '+from+' to '+to;
  }catch(e){msg.textContent='Report error: '+(e.message||e);document.getElementById('crm1PPBody').innerHTML=''}
 }
+function installGuard(){
+ var c=content();
+ if(!c||!window.MutationObserver||guardInstalled)return;
+ guardInstalled=true;c.dataset.crm1PartnerPerformanceGuard='1';
+ var observer=new MutationObserver(function(){
+  var p=page();if(!p||!p.classList.contains('active'))return;
+  if(document.getElementById('crm1PPFinalRoot'))return;
+  clearTimeout(guardTimer);
+  guardTimer=setTimeout(function(){
+   var pp=page();if(pp&&pp.classList.contains('active')&&!document.getElementById('crm1PPFinalRoot'))build();
+  },40);
+ });
+ observer.observe(c,{childList:true,subtree:true});
+ c._crm1PartnerPerformanceObserver=observer;
+}
+function ensureActive(){
+ var p=page();if(!p||!p.classList.contains('active'))return;
+ installGuard();
+ if(!document.getElementById('crm1PPFinalRoot'))build();
+}
 function init(){
  if(started)return;started=true;
  normalizeNav();
- var tries=0,t=setInterval(function(){normalizeNav();var p=page();if(p&&p.classList.contains('active')){build();clearInterval(t)}if(++tries>120)clearInterval(t)},250);
+ var tries=0,t=setInterval(function(){
+  normalizeNav();
+  var p=page();
+  if(p&&p.classList.contains('active')){ensureActive();clearInterval(t)}
+  if(++tries>120)clearInterval(t);
+ },250);
  document.addEventListener('click',function(e){
   var b=e.target.closest('#nav button');
-  if(b && /delivery partner/i.test(String(b.textContent||''))){
-   [0,50,150,300,700,1200].forEach(function(ms){setTimeout(function(){normalizeNav();var p=page();if(p&&p.classList.contains('active'))build()},ms)});
+  if(b&&/delivery partner/i.test(String(b.textContent||''))){
+   normalizeNav();
+   setTimeout(ensureActive,0);
+   setTimeout(ensureActive,100);
+   setTimeout(ensureActive,500);
   }
  });
 }
