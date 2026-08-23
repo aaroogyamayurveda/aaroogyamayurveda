@@ -10,16 +10,24 @@ function today(){return iso(new Date())}
 function nextDay(v){var d=new Date(v+'T00:00:00');d.setDate(d.getDate()+1);return iso(d)}
 function page(){return document.getElementById('partnerPerformance')}
 function content(){return document.getElementById('partnerPerformanceContent')}
-function normalizeHeader(){var p=page();if(!p)return;var h=p.querySelector('.title h2');if(h)h.textContent='Delivery Partners Performance';var s=p.querySelector('.title .sub');if(s)s.textContent='Dealer and courier performance and SLA'}
+function normalizeNav(){
+ document.querySelectorAll('#nav button').forEach(function(b){
+  var t=String(b.textContent||'').trim().toLowerCase();
+  if(t.indexOf('delivery partner')!==-1 && t.indexOf('performance')===-1){b.textContent='🤝 Delivery Partners Performance'}
+ });
+}
+function normalizeHeader(){var p=page();if(!p)return;var h=p.querySelector('.title h2');if(h)h.textContent='Delivery Partners Performance';var s=p.querySelector('.title .sub');if(s)s.textContent='Dealer and courier performance and SLA';}
 function build(){
- var p=page(),c=content();if(!p||!c||!p.classList.contains('active'))return false;normalizeHeader();
+ var p=page(),c=content();if(!p||!c||!p.classList.contains('active'))return false;
+ normalizeNav();normalizeHeader();
  c.innerHTML='<div id="crm1PPFinalRoot"><div class="panel"><div class="crm1-toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label>From <input type="date" id="crm1PPFrom"></label><label>To <input type="date" id="crm1PPTo"></label><button class="btn" id="crm1PPApply">Apply</button><button class="btn alt" id="crm1PPToday">Today</button></div><div id="crm1PPMsg" class="sub"></div></div><div id="crm1PPStats" class="cards"></div><div class="panel"><div class="tablewrap"><table><thead><tr><th>Rank</th><th>Delivery Partner</th><th>Type</th><th>Assigned</th><th>In Progress</th><th>Delivered</th><th>RTO</th><th>Cancelled</th><th>Delivery %</th><th>Order Value</th><th>Revenue</th></tr></thead><tbody id="crm1PPBody"></tbody></table></div></div></div>';
  var t=today();document.getElementById('crm1PPFrom').value=t;document.getElementById('crm1PPTo').value=t;
- document.getElementById('crm1PPApply').onclick=load;document.getElementById('crm1PPToday').onclick=function(){document.getElementById('crm1PPFrom').value=today();document.getElementById('crm1PPTo').value=today();load()};load();return true;
+ document.getElementById('crm1PPApply').onclick=load;document.getElementById('crm1PPToday').onclick=function(){document.getElementById('crm1PPFrom').value=today();document.getElementById('crm1PPTo').value=today();load()};
+ load();return true;
 }
 async function load(){
  var from=document.getElementById('crm1PPFrom').value||today(),to=document.getElementById('crm1PPTo').value||from;if(to<from){var z=from;from=to;to=z;document.getElementById('crm1PPFrom').value=from;document.getElementById('crm1PPTo').value=to}
- var msg=document.getElementById('crm1PPMsg');msg.textContent='Loading...';
+ var msg=document.getElementById('crm1PPMsg');if(!msg)return;msg.textContent='Loading...';
  var end=nextDay(to);
  try{
   var rs=await Promise.all([
@@ -46,6 +54,16 @@ async function load(){
   msg.textContent='Report: '+from+' to '+to;
  }catch(e){msg.textContent='Report error: '+(e.message||e);document.getElementById('crm1PPBody').innerHTML=''}
 }
-function init(){if(started)return;started=true;var tries=0,t=setInterval(function(){var p=page();if(p&&p.classList.contains('active')){build();clearInterval(t)}if(++tries>120)clearInterval(t)},500);document.addEventListener('click',function(e){if(e.target.closest('#nav button'))setTimeout(function(){var p=page();if(p&&p.classList.contains('active'))build()},300)})}
+function init(){
+ if(started)return;started=true;
+ normalizeNav();
+ var tries=0,t=setInterval(function(){normalizeNav();var p=page();if(p&&p.classList.contains('active')){build();clearInterval(t)}if(++tries>120)clearInterval(t)},250);
+ document.addEventListener('click',function(e){
+  var b=e.target.closest('#nav button');
+  if(b && /delivery partner/i.test(String(b.textContent||''))){
+   [0,50,150,300,700,1200].forEach(function(ms){setTimeout(function(){normalizeNav();var p=page();if(p&&p.classList.contains('active'))build()},ms)});
+  }
+ });
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
