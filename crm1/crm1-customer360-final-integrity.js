@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 var started=false,lastMobile='',rendering=false;
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]})}
+function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'})[m]})}
 function fmt(v){return v?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium',timeStyle:'short'}).format(new Date(v)):'-'}
 function getMobile(){
  var nodes=[document.getElementById('crm360Result'),document.querySelector('.main .page.active'),document.querySelector('.main')];
@@ -21,12 +21,14 @@ async function render(mobile){
  var box=document.createElement('div');box.id='crm1C360CompleteTimeline';box.className='panel crm1-c360-integrity';box.innerHTML='<h3>Complete Activity Timeline</h3><div class="muted">Loading lead, calls, follow-ups, orders and order-status history…</div>';place(box,host);
  try{
   var cust=(await window.sb.from('customers').select('id,customer_name').eq('mobile',mobile).maybeSingle()).data||null,cid=cust&&cust.id;
-  var leadP=window.sb.from('crm_leads').select('id,lead_name,lead_status,product_name,conversion_order_id,created_at,updated_at').eq('mobile',mobile).order('created_at',{ascending:false});
-  var orderP=cid?window.sb.from('orders').select('id,order_no,order_status,verification_status,order_type,order_priority,total_amount,created_at,updated_at').eq('customer_id',cid).order('created_at',{ascending:false}):window.sb.from('orders').select('id,order_no,order_status,verification_status,order_type,order_priority,total_amount,created_at,updated_at').eq('mobile',mobile).order('created_at',{ascending:false});
-  var followP=cid?window.sb.from('followups').select('id,followup_at,status,disposition,notes,order_id,created_at').eq('customer_id',cid).order('followup_at',{ascending:false}):Promise.resolve({data:[]});
-  var intP=cid?window.sb.from('crm_interactions').select('id,interaction_type,direction,status,disposition,subject,details,order_id,started_at,created_at').eq('customer_id',cid).order('created_at',{ascending:false}).limit(500):Promise.resolve({data:[]});
-  var rs=await Promise.all([leadP,orderP,followP,intP]);rs.forEach(function(r){if(r&&r.error)throw r.error});
-  var leads=rs[0].data||[],orders=rs[1].data||[],follow=rs[2].data||[],ints=rs[3].data||[],hist=[];
+  var leadR=await window.sb.from('crm_leads').select('id,lead_name,lead_status,product_name,conversion_order_id,created_at,updated_at').eq('mobile',mobile).order('created_at',{ascending:false});
+  if(leadR.error)throw leadR.error;
+  var leads=leadR.data||[];
+  var orderP=cid?window.sb.from('orders').select('id,order_no,order_status,verification_status,order_type,order_priority,total_amount,created_at,updated_at').eq('customer_id',cid).order('created_at',{ascending:false}):Promise.resolve({data:[],error:null});
+  var followP=cid?window.sb.from('followups').select('id,followup_at,status,disposition,notes,order_id,created_at').eq('customer_id',cid).order('followup_at',{ascending:false}):Promise.resolve({data:[],error:null});
+  var intP=cid?window.sb.from('crm_interactions').select('id,interaction_type,direction,status,disposition,subject,details,order_id,started_at,created_at').eq('customer_id',cid).order('created_at',{ascending:false}).limit(500):Promise.resolve({data:[],error:null});
+  var rs=await Promise.all([orderP,followP,intP]);rs.forEach(function(r){if(r&&r.error)throw r.error});
+  var orders=rs[0].data||[],follow=rs[1].data||[],ints=rs[2].data||[],hist=[];
   if(orders.length){var ids=orders.map(function(o){return o.id}),hr=await window.sb.from('order_status_history').select('id,order_id,old_status,new_status,remarks,created_at').in('order_id',ids).order('created_at',{ascending:false});if(!hr.error)hist=hr.data||[]}
   var ev=[];
   leads.forEach(function(x){ev.push({at:x.created_at,type:'Lead',status:x.lead_status||'new',order:x.conversion_order_id?'Linked':'-',details:[x.lead_name,x.product_name].filter(Boolean).join(' · ')||'Lead created'})});
