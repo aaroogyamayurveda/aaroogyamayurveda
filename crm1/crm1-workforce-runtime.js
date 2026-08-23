@@ -1,7 +1,7 @@
 /* CRM1 workforce runtime loader: load workforce modules only after auth is available. */
 (function(){
   'use strict';
-  var started=false,reportStarted=false,c360Started=false;
+  var started=false,reportStarted=false,c360Started=false,timelineStarted=false;
   var IST='Asia/Kolkata';
   function istToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:IST,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
   function istStart(dateStr){return new Date(dateStr+'T00:00:00+05:30').toISOString();}
@@ -58,9 +58,17 @@
       s.onload=function(){window.dispatchEvent(new CustomEvent('crm1Customer360IntegrityReady'));};s.onerror=function(){console.warn('CRM1 Customer 360 integrity module failed to load');c360Started=false;};document.head.appendChild(s);
     }).catch(function(){});
   }
+  function addOrderTimeline(){
+    if(timelineStarted||!window.sb)return;
+    timelineStarted=true;
+    var s=document.createElement('script');s.src='./crm1-order-timeline.js?v=1';s.async=false;
+    s.onload=function(){window.dispatchEvent(new CustomEvent('crm1OrderTimelineReady'));};
+    s.onerror=function(){console.warn('CRM1 Order Timeline module failed to load');timelineStarted=false;};
+    document.head.appendChild(s);
+  }
   function load(){
     if(started)return;var sb=window.sb;if(!sb)return;
-    sb.auth.getUser().then(function(r){if(!r||!r.data||!r.data.user||started)return;started=true;var s=document.createElement('script');s.src='./crm1-workforce-v2.js?v=5';s.async=false;s.onload=function(){window.dispatchEvent(new CustomEvent('crm1WorkforceReady'));setTimeout(addReports,300);setTimeout(addCustomer360Integrity,500);};s.onerror=function(){console.error('CRM1 workforce module failed to load');started=false;};document.head.appendChild(s);}).catch(function(){});
+    sb.auth.getUser().then(function(r){if(!r||!r.data||!r.data.user||started)return;started=true;var s=document.createElement('script');s.src='./crm1-workforce-v2.js?v=5';s.async=false;s.onload=function(){window.dispatchEvent(new CustomEvent('crm1WorkforceReady'));setTimeout(addReports,300);setTimeout(addCustomer360Integrity,500);setTimeout(addOrderTimeline,700);};s.onerror=function(){console.error('CRM1 workforce module failed to load');started=false;};document.head.appendChild(s);}).catch(function(){});
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();window.addEventListener('crm1SupabaseReady',load);if(window.sb&&window.sb.auth){window.sb.auth.onAuthStateChange(function(event,session){if(event==='SIGNED_IN'&&session)setTimeout(function(){load();addReports();addCustomer360Integrity();},100);});}setTimeout(function(){load();addReports();addCustomer360Integrity();},800);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();window.addEventListener('crm1SupabaseReady',load);if(window.sb&&window.sb.auth){window.sb.auth.onAuthStateChange(function(event,session){if(event==='SIGNED_IN'&&session)setTimeout(function(){load();addReports();addCustomer360Integrity();addOrderTimeline();},100);});}setTimeout(function(){load();addReports();addCustomer360Integrity();addOrderTimeline();},800);
 })();
