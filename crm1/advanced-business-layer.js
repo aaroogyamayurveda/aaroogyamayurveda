@@ -71,7 +71,7 @@
       await load('./crm1-pin-rules-detailed.js?v=1');
       await load('./crm1-inventory-detailed.js?v=1');
       await load('./crm1-qa-detailed-v6.js?v=6');
-      await load('./crm1-render-stability.js?v=1');
+      await load('./crm1-render-stability.js?v=2');
       /* Customer 360 is normalized at source; no DOM cleanup overlay is loaded. */
     }finally{
       unlock();
