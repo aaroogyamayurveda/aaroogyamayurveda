@@ -15,7 +15,8 @@ function place(box,host){var panels=host.querySelectorAll('.panel');if(panels.le
 async function render(mobile){
  if(rendering||!window.sb||!mobile)return;
  var host=root();if(!host)return;
- if(lastMobile===mobile&&document.getElementById('crm1C360CompleteTimeline'))return;
+ var existing=document.getElementById('crm1C360CompleteTimeline');
+ if(lastMobile===mobile&&existing&&!/orders\.mobile does not exist/i.test(existing.textContent||''))return;
  rendering=true;lastMobile=mobile;style();
  var old=document.getElementById('crm1C360CompleteTimeline');if(old)old.remove();
  var box=document.createElement('div');box.id='crm1C360CompleteTimeline';box.className='panel crm1-c360-integrity';box.innerHTML='<h3>Complete Activity Timeline</h3><div class="muted">Loading lead, calls, follow-ups, orders and order-status history…</div>';place(box,host);
@@ -24,12 +25,13 @@ async function render(mobile){
   var leadR=await window.sb.from('crm_leads').select('id,lead_name,lead_status,product_name,conversion_order_id,created_at,updated_at').eq('mobile',mobile).order('created_at',{ascending:false});
   if(leadR.error)throw leadR.error;
   var leads=leadR.data||[];
-  var orderP=cid?window.sb.from('orders').select('id,order_no,order_status,verification_status,order_type,order_priority,total_amount,created_at,updated_at').eq('customer_id',cid).order('created_at',{ascending:false}):Promise.resolve({data:[],error:null});
-  var followP=cid?window.sb.from('followups').select('id,followup_at,status,disposition,notes,order_id,created_at').eq('customer_id',cid).order('followup_at',{ascending:false}):Promise.resolve({data:[],error:null});
-  var intP=cid?window.sb.from('crm_interactions').select('id,interaction_type,direction,status,disposition,subject,details,order_id,started_at,created_at').eq('customer_id',cid).order('created_at',{ascending:false}).limit(500):Promise.resolve({data:[],error:null});
+  if(!cid)throw new Error('Customer record not found for mobile '+mobile);
+  var orderP=window.sb.from('orders').select('id,order_no,order_status,verification_status,order_type,order_priority,total_amount,created_at,updated_at').eq('customer_id',cid).order('created_at',{ascending:false});
+  var followP=window.sb.from('followups').select('id,followup_at,status,disposition,notes,order_id,created_at').eq('customer_id',cid).order('followup_at',{ascending:false});
+  var intP=window.sb.from('crm_interactions').select('id,interaction_type,direction,status,disposition,subject,details,order_id,started_at,created_at').eq('customer_id',cid).order('created_at',{ascending:false}).limit(500);
   var rs=await Promise.all([orderP,followP,intP]);rs.forEach(function(r){if(r&&r.error)throw r.error});
   var orders=rs[0].data||[],follow=rs[1].data||[],ints=rs[2].data||[],hist=[];
-  if(orders.length){var ids=orders.map(function(o){return o.id}),hr=await window.sb.from('order_status_history').select('id,order_id,old_status,new_status,remarks,created_at').in('order_id',ids).order('created_at',{ascending:false});if(!hr.error)hist=hr.data||[]}
+  if(orders.length){var ids=orders.map(function(o){return o.id}),hr=await window.sb.from('order_status_history').select('id,order_id,old_status,new_status,remarks,created_at').in('order_id',ids).order('created_at',{ascending:false});if(hr.error)throw hr.error;hist=hr.data||[]}
   var ev=[];
   leads.forEach(function(x){ev.push({at:x.created_at,type:'Lead',status:x.lead_status||'new',order:x.conversion_order_id?'Linked':'-',details:[x.lead_name,x.product_name].filter(Boolean).join(' · ')||'Lead created'})});
   ints.forEach(function(x){ev.push({at:x.created_at||x.started_at,type:'Call / Interaction',status:x.disposition||x.status||'-',order:x.order_id?'Linked':'-',details:[x.direction,x.subject||x.details].filter(Boolean).join(' · ')||x.interaction_type||'Interaction'})});
@@ -41,6 +43,10 @@ async function render(mobile){
  }catch(e){box.innerHTML='<h3>Complete Activity Timeline</h3><div class="crm1-c360-error">Unable to load timeline: '+esc(e.message||e)+'</div>'}
  rendering=false;
 }
-function init(){if(started)return;started=true;var ticks=0,t=setInterval(function(){var m=getMobile();if(m)render(m);if(++ticks>240)clearInterval(t)},500);var mo=new MutationObserver(function(){var m=getMobile();if(m)render(m)});mo.observe(document.body,{childList:true,subtree:true,characterData:true});}
+function watchdog(){
+ var box=document.getElementById('crm1C360CompleteTimeline');
+ if(box&&/orders\.mobile does not exist/i.test(box.textContent||'')){lastMobile='';var m=getMobile();if(m)render(m)}
+}
+function init(){if(started)return;started=true;style();var ticks=0,t=setInterval(function(){var m=getMobile();if(m)render(m);watchdog();if(++ticks>240)clearInterval(t)},500);var mo=new MutationObserver(function(){var m=getMobile();if(m)render(m);watchdog()});mo.observe(document.body,{childList:true,subtree:true,characterData:true});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
