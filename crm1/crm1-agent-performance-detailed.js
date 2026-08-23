@@ -26,16 +26,53 @@
       ]);
       var err=ordersR.error||leadsR.error||intR.error||profilesR.error;
       var body=document.getElementById('crm1APBody');if(err){body.innerHTML='<div class="msg">'+esc(err.message)+'</div>';return}
+
       var agents=new Map((profilesR.data||[]).map(function(p){return [p.id,{name:p.full_name||p.employee_code||p.id,code:p.employee_code||''}]}));
       var rows={};
-      function bucket(id){var k=id||'unassigned';if(!rows[k])rows[k]={name:agents.get(k)?.name||'Unassigned',code:agents.get(k)?.code||'',leads:0,worked:0,orders:0,delivered:0,cancelled:0,orderValue:0,revenue:0};return rows[k]}
-      (leadsR.data||[]).forEach(function(x){bucket(x.assigned_to).leads++});
-      (intR.data||[]).forEach(function(x){if(x.agent_id)bucket(x.agent_id).worked++});
-      (ordersR.data||[]).filter(function(x){return !String(x.remarks||'').includes('[ENQUIRY]')}).forEach(function(x){var b=bucket(x.agent_id);b.orders++;b.orderValue+=Number(x.total_amount||0);if(x.order_status==='delivered'){b.delivered++;b.revenue+=Number(x.total_amount||0)}if(x.order_status==='cancelled'||x.order_status==='rto')b.cancelled++});
-      /* Revenue = delivered orders × their order value (sum of delivered order values). */
-      var arr=Object.values(rows).sort(function(a,b){return b.revenue-a.revenue||b.delivered-a.delivered||b.orders-a.orders||b.leads-a.leads});
-      var totalLeads=arr.reduce(function(a,x){return a+x.leads},0),totalWorked=arr.reduce(function(a,x){return a+x.worked},0),totalOrders=arr.reduce(function(a,x){return a+x.orders},0),totalDelivered=arr.reduce(function(a,x){return a+x.delivered},0),totalRevenue=arr.reduce(function(a,x){return a+x.revenue},0),totalOrderValue=arr.reduce(function(a,x){return a+x.orderValue},0);
-      body.innerHTML='<div class="cards"><div class="stat"><span>Leads</span><b>'+totalLeads+'</b></div><div class="stat"><span>Worked / Interactions</span><b>'+totalWorked+'</b></div><div class="stat"><span>Orders</span><b>'+totalOrders+'</b></div><div class="stat"><span>Conversion %</span><b>'+fmtPct(totalOrders,totalLeads)+'</b></div><div class="stat"><span>Delivered</span><b>'+totalDelivered+'</b></div><div class="stat"><span>Revenue</span><b>'+money(totalRevenue)+'</b></div></div><div class="tablewrap"><table><thead><tr><th>Rank</th><th>Agent</th><th>Leads</th><th>Worked</th><th>Orders</th><th>Conversion %</th><th>Delivered</th><th>Delivery %</th><th>Cancelled/RTO</th><th>Order Value</th><th>Revenue</th></tr></thead><tbody>'+(arr.map(function(x,i){return '<tr><td><b>'+String(i+1)+'</b></td><td><b>'+esc(x.name)+'</b><div class="crm1-muted">'+esc(x.code)+'</div></td><td>'+x.leads+'</td><td>'+x.worked+'</td><td>'+x.orders+'</td><td>'+fmtPct(x.orders,x.leads)+'</td><td>'+x.delivered+'</td><td>'+fmtPct(x.delivered,x.orders)+'</td><td>'+x.cancelled+'</td><td>'+money(x.orderValue)+'</td><td><b>'+money(x.revenue)+'</b></td></tr>'}).join('')||'<tr><td colspan="11" class="empty">No agent activity for selected period</td></tr>')+'</tbody></table></div>';
+      function bucket(id){
+        if(!id || !agents.has(id))return null;
+        var k=id;
+        if(!rows[k])rows[k]={name:agents.get(k).name,code:agents.get(k).code,leads:0,worked:0,orders:0,delivered:0,cancelled:0,orderValue:0,revenue:0,convertedLeadIds:new Set()};
+        return rows[k];
+      }
+
+      /* Leads are counted only against a real active/known agent. */
+      (leadsR.data||[]).forEach(function(x){
+        var b=bucket(x.assigned_to);if(!b)return;
+        b.leads++;
+        if(String(x.lead_status||'').toLowerCase().includes('converted'))b.convertedLeadIds.add(x.id);
+      });
+
+      /* Interactions are counted only where an agent is known. */
+      (intR.data||[]).forEach(function(x){var b=bucket(x.agent_id);if(b)b.worked++});
+
+      /* Orders belong to the order's agent. Unassigned/unknown-agent orders are
+         excluded from agent ranking rather than creating duplicate Unassigned rows. */
+      (ordersR.data||[]).filter(function(x){return !String(x.remarks||'').includes('[ENQUIRY]')}).forEach(function(x){
+        var b=bucket(x.agent_id);if(!b)return;
+        b.orders++;
+        b.orderValue+=Number(x.total_amount||0);
+        if(x.order_status==='delivered'){
+          b.delivered++;
+          b.revenue+=Number(x.total_amount||0);
+        }
+        if(x.order_status==='cancelled'||x.order_status==='rto')b.cancelled++;
+      });
+
+      /* Conversion % = unique converted leads / assigned leads.
+         Revenue = sum of delivered order values only. Rank is driven by revenue. */
+      var arr=Object.values(rows).map(function(x){x.converted=x.convertedLeadIds.size;delete x.convertedLeadIds;return x});
+      arr.sort(function(a,b){return b.revenue-a.revenue||b.delivered-a.delivered||b.orders-a.orders||b.leads-a.leads});
+
+      var totalLeads=arr.reduce(function(a,x){return a+x.leads},0),
+          totalWorked=arr.reduce(function(a,x){return a+x.worked},0),
+          totalOrders=arr.reduce(function(a,x){return a+x.orders},0),
+          totalDelivered=arr.reduce(function(a,x){return a+x.delivered},0),
+          totalRevenue=arr.reduce(function(a,x){return a+x.revenue},0),
+          totalConverted=arr.reduce(function(a,x){return a+x.converted},0),
+          totalOrderValue=arr.reduce(function(a,x){return a+x.orderValue},0);
+
+      body.innerHTML='<div class="cards"><div class="stat"><span>Leads</span><b>'+totalLeads+'</b></div><div class="stat"><span>Worked / Interactions</span><b>'+totalWorked+'</b></div><div class="stat"><span>Orders</span><b>'+totalOrders+'</b></div><div class="stat"><span>Converted Leads</span><b>'+totalConverted+'</b></div><div class="stat"><span>Conversion %</span><b>'+fmtPct(totalConverted,totalLeads)+'</b></div><div class="stat"><span>Delivered</span><b>'+totalDelivered+'</b></div><div class="stat"><span>Revenue</span><b>'+money(totalRevenue)+'</b></div></div><div class="tablewrap"><table><thead><tr><th>Rank</th><th>Agent</th><th>Leads</th><th>Worked</th><th>Converted</th><th>Conversion %</th><th>Orders</th><th>Delivered</th><th>Delivery %</th><th>Cancelled/RTO</th><th>Order Value</th><th>Revenue</th></tr></thead><tbody>'+(arr.map(function(x,i){return '<tr><td><b>'+String(i+1)+'</b></td><td><b>'+esc(x.name)+'</b><div class="crm1-muted">'+esc(x.code)+'</div></td><td>'+x.leads+'</td><td>'+x.worked+'</td><td>'+x.converted+'</td><td>'+fmtPct(x.converted,x.leads)+'</td><td>'+x.orders+'</td><td>'+x.delivered+'</td><td>'+fmtPct(x.delivered,x.orders)+'</td><td>'+x.cancelled+'</td><td>'+money(x.orderValue)+'</td><td><b>'+money(x.revenue)+'</b></td></tr>'}).join('')||'<tr><td colspan="12" class="empty">No agent activity for selected period</td></tr>')+'</tbody></table></div>';
     }
     document.getElementById('crm1APApply').onclick=load;
     document.getElementById('crm1APToday').onclick=function(){var v=today();document.getElementById('crm1APFrom').value=v;document.getElementById('crm1APTo').value=v;load()};
