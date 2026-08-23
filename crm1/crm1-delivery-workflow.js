@@ -19,10 +19,6 @@
   }
   function money(v){return '₹'+Number(v||0).toLocaleString('en-IN')}
   function toast(t){if(typeof window.toast==='function')window.toast(t);else console.log(t)}
-  function confirmAction(text){
-    if(typeof window.crmConfirm==='function')return window.crmConfirm(text,'Confirm Status Update');
-    return Promise.resolve(window.confirm(text));
-  }
   function currentProfile(){return window.profile||null}
   function currentUser(){return window.me||null}
 
@@ -180,9 +176,16 @@
       else x.inprogress++;
     });
     var rows=Object.values(map).sort(function(a,b){return b.assigned-a.assigned});
-    var total=rows.reduce(function(a,x){return a+x.assigned},0),td=rows.reduce(function(a,x){return a+x.delivered},0),tr=rows.reduce(function(a,x){return a+x.rto},0);
-    c.innerHTML='<div class="cards"><div class="stat"><span>Partners</span><b>'+rows.length+'</b></div><div class="stat"><span>Assigned</span><b>'+total+'</b></div><div class="stat"><span>Delivered</span><b>'+td+'</b></div><div class="stat"><span>Overall Delivery %</span><b>'+(total?(td/total*100).toFixed(1):'0')+'%</b></div></div><div class="crm1-toolbar"><button class="btn alt" id="crm1PartnerRefresh">Refresh</button><span class="sub">Delivery performance is calculated from current order statuses.</span></div><div class="tablewrap"><table><thead><tr><th>Partner</th><th>Type</th><th>Assigned</th><th>In Progress</th><th>Delivered</th><th>RTO</th><th>Cancelled</th><th>Delivery %</th><th>Order Value</th></tr></thead><tbody>'+rows.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.type)+'</td><td>'+x.assigned+'</td><td>'+x.inprogress+'</td><td>'+x.delivered+'</td><td>'+x.rto+'</td><td>'+x.cancelled+'</td><td>'+(x.assigned?(x.delivered/x.assigned*100).toFixed(1):'0')+'%</td><td>'+money(x.value)+'</td></tr>'}).join('')||'<tr><td colspan="9" class="empty">No assigned delivery orders</td></tr>'+'</tbody></table></div>';
-    document.getElementById('crm1PartnerRefresh').onclick=renderPartnerPerformance;
+    var total=rows.reduce(function(a,x){return a+x.assigned},0),td=rows.reduce(function(a,x){return a+x.delivered},0);
+    c.innerHTML='<div class="cards"><div class="stat"><span>Partners</span><b>'+rows.length+'</b></div><div class="stat"><span>Assigned</span><b>'+total+'</b></div><div class="stat"><span>Delivered</span><b>'+td+'</b></div><div class="stat"><span>Overall Delivery %</span><b>'+(total?(td/total*100).toFixed(1):'0')+'%</b></div></div><div class="crm1-toolbar"><button class="btn alt" id="crm1PartnerRefresh">Refresh</button><span class="sub">Delivery performance is calculated from current order statuses.</span></div><div class="tablewrap"><table><thead><tr><th>Partner</th><th>Type</th><th>Assigned</th><th>In Progress</th><th>Delivered</th><th>RTO</th><th>Cancelled</th><th>Delivery %</th><th>Order Value</th></tr></thead><tbody>'+(rows.map(function(x){return '<tr><td>'+esc(x.name)+'</td><td>'+esc(x.type)+'</td><td>'+x.assigned+'</td><td>'+x.inprogress+'</td><td>'+x.delivered+'</td><td>'+x.rto+'</td><td>'+x.cancelled+'</td><td>'+(x.assigned?(x.delivered/x.assigned*100).toFixed(1):'0')+'%</td><td>'+money(x.value)+'</td></tr>'}).join('')||'<tr><td colspan="9" class="empty">No assigned delivery orders</td></tr>')+'</tbody></table></div>';
+    var refreshBtn=document.getElementById('crm1PartnerRefresh');if(refreshBtn)refreshBtn.onclick=renderPartnerPerformance;
+  }
+
+  function refreshActivePage(){
+    var p=currentProfile();if(!p)return;
+    if(p.role==='dealer'||p.role==='courier_manager')enhanceDealerCourierPage();
+    var page=document.getElementById('partnerPerformance');
+    if(page&&page.classList.contains('active'))renderPartnerPerformance();
   }
 
   function watchPages(){
@@ -190,10 +193,13 @@
       var el=document.getElementById(id);if(!el)return;
       var obs=new MutationObserver(function(){
         if(el.classList.contains('active')){
-          if(id==='partnerPerformance')renderPartnerPerformance();else enhanceDealerCourierPage();
+          if(id==='partnerPerformance')setTimeout(renderPartnerPerformance,50);else setTimeout(enhanceDealerCourierPage,80);
         }
       });
-      obs.observe(el,{attributes:true,subtree:true,childList:true});
+      obs.observe(el,{attributes:true,attributeFilter:['class']});
+    });
+    document.addEventListener('click',function(e){
+      if(e.target.closest('#nav button'))setTimeout(refreshActivePage,250);
     });
   }
 
@@ -201,7 +207,7 @@
     if(started)return;started=true;
     hookActionHistory();
     watchPages();
-    [500,1500,3000].forEach(function(ms){setTimeout(function(){enhanceDealerCourierPage();var p=document.getElementById('partnerPerformance');if(p&&p.classList.contains('active'))renderPartnerPerformance()},ms)});
+    [500,1500,3000].forEach(function(ms){setTimeout(refreshActivePage,ms)});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
