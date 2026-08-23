@@ -13,6 +13,7 @@
   const load=src=>new Promise(resolve=>{const s=document.createElement('script');s.src=src;s.async=false;s.onload=resolve;s.onerror=()=>resolve();document.head.appendChild(s)});
   await load('./advanced-business-layer.core.js');
   await load('./crm1-followup-verification-fix.js');
+  await load('./crm1-pin-auto-assignment.js?v=1');
   await load('./crm1-followups-queue-fix.js');
   await load('./crm1-followup-customer-context-fix.js?v=2');
   await load('./crm1-agent-workspace.js');
