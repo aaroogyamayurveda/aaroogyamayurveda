@@ -53,7 +53,7 @@
     './crm1-workforce-ui-bridge.js?v=2',
     './crm1-followup-lead-status-sync.js?v=1',
     './crm1-order-assignment-verification-guard.js?v=1',
-    './crm1-manager-reports.js?v=1',
+    './crm1-manager-reports.js?v=2',
     './crm1-order-timeline.js?v=4',
     './crm1-delivery-workflow.js?v=2',
     './crm1-agent-performance-detailed.js?v=2',
