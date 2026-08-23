@@ -1,6 +1,7 @@
-/* CRM1 IST Operations Fix v1
- * Owns only Dashboard-adjacent Settlement + Delivery Partner Performance date handling.
+/* CRM1 IST Operations Fix v2
+ * Single owner for Operations -> Settlements and Delivery Partners Performance.
  * Uses Asia/Kolkata boundaries for date filters and does not alter orders or financial data.
+ * Navigation labels are normalized during mount so no delayed wrapper/render pass is needed.
  */
 (function(){
   'use strict';
@@ -14,12 +15,16 @@
   function istRange(from,to){var f=from||istDate(),t=to||f;if(t<f){var z=f;f=t;t=z}return {from:new Date(f+'T00:00:00+05:30').toISOString(),to:new Date(nextDate(t)+'T00:00:00+05:30').toISOString(),fromDate:f,toDate:t}}
   function active(id){var p=$(id);return p&&p.classList.contains('active')}
   function partnerMaps(){return Promise.all([window.sb.from('dealers').select('id,dealer_name,is_active'),window.sb.from('profiles').select('id,full_name,is_active').eq('role','courier_manager')])}
+  function normalizeLabels(){
+    var p=$('partnerPerformance');
+    if(p){var h=p.querySelector('.title h2');if(h)h.textContent='Delivery Partners Performance';var s=p.querySelector('.title .sub');if(s)s.textContent='Dealer and courier performance and SLA'}
+    document.querySelectorAll('#nav button').forEach(function(b){var t=String(b.textContent||'').trim().toLowerCase();if(t.indexOf('delivery partners')!==-1&&t.indexOf('performance')===-1)b.textContent='🤝 Delivery Partners Performance'})
+  }
 
   async function renderPartnerPerformance(){
     var p=$('partnerPerformance'),c=$('partnerPerformanceContent');if(!p||!c||!p.classList.contains('active')||!window.sb)return;
     c.innerHTML='<div class="panel"><div class="crm1-toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label>From <input type="date" id="crm1ISTPPFrom"></label><label>To <input type="date" id="crm1ISTPPTo"></label><button class="btn" id="crm1ISTPPApply">Apply</button><button class="btn alt" id="crm1ISTPPToday">Today</button></div><div id="crm1ISTPPMsg" class="sub"></div></div><div id="crm1ISTPPStats" class="cards"></div><div class="panel"><div class="tablewrap"><table><thead><tr><th>Rank</th><th>Delivery Partner</th><th>Type</th><th>Assigned</th><th>In Progress</th><th>Delivered</th><th>RTO</th><th>Cancelled</th><th>Delivery %</th><th>Order Value</th><th>Revenue</th></tr></thead><tbody id="crm1ISTPPBody"></tbody></table></div></div>';
-    var t=istDate();$('crm1ISTPPFrom').value=t;$('crm1ISTPPTo').value=t;
-    $('crm1ISTPPApply').onclick=loadPartner;$('crm1ISTPPToday').onclick=function(){$('crm1ISTPPFrom').value=istDate();$('crm1ISTPPTo').value=istDate();loadPartner()};
+    var t=istDate();$('crm1ISTPPFrom').value=t;$('crm1ISTPPTo').value=t;$('crm1ISTPPApply').onclick=loadPartner;$('crm1ISTPPToday').onclick=function(){$('crm1ISTPPFrom').value=istDate();$('crm1ISTPPTo').value=istDate();loadPartner()};
     await loadPartner();
     async function loadPartner(){
       var from=$('crm1ISTPPFrom').value||istDate(),to=$('crm1ISTPPTo').value||from,rng=istRange(from,to),msg=$('crm1ISTPPMsg');if(!msg)return;msg.textContent='Loading…';
@@ -50,7 +55,7 @@
         var s=await window.sb.from('partner_settlements').select('id,partner_id,period_from,period_to,delivered_orders,cod_amount,commission_amount,net_payable,status,partner_type,created_at').gte('period_from',rng.fromDate).lte('period_to',rng.toDate).order('period_from',{ascending:false});if(s.error)throw s.error;var rows=s.data||[];
         $('crm1ISTSetBody').innerHTML=rows.map(function(x){var name=x.partner_type==='dealer'?dm.get(x.partner_id):cm.get(x.partner_id);return '<tr><td>'+esc(name||x.partner_id||'-')+'</td><td>'+esc(x.period_from)+' to '+esc(x.period_to)+'</td><td>'+Number(x.delivered_orders||0)+'</td><td>'+money(x.cod_amount)+'</td><td>'+money(x.commission_amount)+'</td><td>'+money(x.net_payable)+'</td><td>'+esc(x.status||'-')+'</td></tr>'}).join('')||'<tr><td colspan="7" class="empty">No settlements for selected period</td></tr>';
         var o=await window.sb.from('orders').select('id,order_no,order_status,total_amount,order_date,dealer_id,courier_manager_id,customer_id,customers(customer_name),remarks').eq('order_status','delivered').gte('order_date',rng.from).lt('order_date',rng.to).or('remarks.is.null,remarks.not.ilike.%[ENQUIRY]%');if(o.error)throw o.error;var orders=o.data||[];var existing=new Set();rows.forEach(function(x){existing.add(String(x.partner_id)+'|'+x.period_from+'|'+x.period_to)});
-        var pending=orders.filter(function(x){var pid=x.dealer_id||x.courier_manager_id;var type=x.dealer_id?'dealer':'courier';return !existing.has(String(pid)+'|'+rng.fromDate+'|'+rng.toDate)});
+        var pending=orders.filter(function(x){var pid=x.dealer_id||x.courier_manager_id;return !existing.has(String(pid)+'|'+rng.fromDate+'|'+rng.toDate)});
         $('crm1ISTPendingBody').innerHTML=pending.map(function(x){var name=x.dealer_id?dm.get(x.dealer_id):cm.get(x.courier_manager_id);return '<tr><td>#'+esc(x.order_no)+'</td><td>'+esc(new Intl.DateTimeFormat('en-IN',{timeZone:TZ,day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}).format(new Date(x.order_date)))+'</td><td>'+esc(name||'-')+'</td><td>'+esc(x.dealer_id?'Dealer':'Courier')+'</td><td>'+esc(x.customers&&x.customers.customer_name||'-')+'</td><td>'+money(x.total_amount)+'</td><td><span class="pill">delivered</span></td></tr>'}).join('')||'<tr><td colspan="7" class="empty">No delivered orders pending settlement</td></tr>';
         var delivered=orders.length,cod=orders.reduce(function(a,x){return a+Number(x.total_amount||0)},0),commission=rows.reduce(function(a,x){return a+Number(x.commission_amount||0)},0),net=rows.reduce(function(a,x){return a+Number(x.net_payable||0)},0);$('crm1ISTSetKpis').innerHTML='<div class="stat"><span>Settlements</span><b>'+rows.length+'</b></div><div class="stat"><span>Delivered</span><b>'+delivered+'</b></div><div class="stat"><span>Pending Settlement Orders</span><b>'+pending.length+'</b></div><div class="stat"><span>Delivered COD</span><b>'+money(cod)+'</b></div><div class="stat"><span>Commission</span><b>'+money(commission)+'</b></div><div class="stat"><span>Net Settlement</span><b>'+money(net)+'</b></div>';
         msg.textContent='Report: '+rng.fromDate+' to '+rng.toDate;
@@ -60,9 +65,11 @@
 
   function mountWatcher(){
     var nav=document.getElementById('nav');if(!nav)return;
-    function run(){setTimeout(function(){if(active('partnerPerformance'))renderPartnerPerformance();if(active('settlements'))renderSettlements()},60)}
-    nav.addEventListener('click',run,true);run();
+    function run(){setTimeout(function(){normalizeLabels();if(active('partnerPerformance'))renderPartnerPerformance();if(active('settlements'))renderSettlements()},0)}
+    nav.addEventListener('click',run,true);
+    normalizeLabels();
+    run();
   }
-  function init(){if(started)return;started=true;mountWatcher();var obs=new MutationObserver(function(){if(active('partnerPerformance')){var x=$('crm1ISTPPFrom');if(!x)renderPartnerPerformance()}if(active('settlements')){var y=$('crm1ISTSetFrom');if(!y)renderSettlements()}});obs.observe(document.body,{childList:true,subtree:true});}
+  function init(){if(started)return;started=true;mountWatcher()}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
