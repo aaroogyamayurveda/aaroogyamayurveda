@@ -12,6 +12,14 @@
     return '';
   }
   function getBox(){return document.getElementById('crm1C360CompleteTimeline')||null;}
+  function normalizeSynthetic(status){
+    var m=String(status||'').match(/^\s*[—-]\s*→\s*(.+?)\s*$/);
+    if(!m)return null;
+    var nxt=m[1].trim();
+    if(nxt==='new')return {remove:true};
+    var prev={verified:'new',assigned:'verified',packed:'assigned',dispatched:'packed',in_transit:'dispatched',delivered:'in_transit',rto:'delivered',cancelled:'delivered',hold:'assigned'}[nxt];
+    return prev?{status:prev+' → '+nxt}:null;
+  }
   function cleanTimeline(box){
     var table=box&&box.querySelector('table');
     if(!table||!table.tBodies[0])return;
@@ -23,6 +31,11 @@
       var order=String(cells[3].textContent||'').trim();
       var dt=String(cells[0].textContent||'').trim();
       if(event==='Order Created')cells[2].textContent='new';
+      if(event==='Order Status'){
+        var norm=normalizeSynthetic(status);
+        if(norm&&norm.remove){row.remove();return;}
+        if(norm&&norm.status){cells[2].textContent=norm.status;status=norm.status;}
+      }
       var m=status.match(/^(.+)\s*→\s*(.+)$/);if(!m)return;
       var old=m[1].trim(),nxt=m[2].trim();
       var key=order+'|'+dt+'|'+nxt;
@@ -55,10 +68,12 @@
   async function process(){
     var mobile=getMobile(),box=getBox();
     if(!mobile||!box)return;
-    if(box.dataset.crm1TimelineCleanedFor===mobile)return;
     var table=box.querySelector('table');
-    if(!table||!table.tBodies[0])return;
+    if(!table||!table.tBodies[0]||!table.tBodies[0].rows.length)return;
+    var sig=(table.tBodies[0].rows.length+'|'+String(table.tBodies[0].textContent||'')).slice(0,12000);
+    if(box.dataset.crm1TimelineCleanedFor===mobile && box.dataset.crm1TimelineSig===sig)return;
     box.dataset.crm1TimelineCleanedFor=mobile;
+    box.dataset.crm1TimelineSig=sig;
     cleanTimeline(box);
     await fillOrderType(box,mobile);
   }
@@ -67,7 +82,7 @@
     var ticks=0;
     var timer=setInterval(function(){
       process().catch(function(){});
-      if(++ticks>30)clearInterval(timer);
+      if(++ticks>45)clearInterval(timer);
     },700);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
