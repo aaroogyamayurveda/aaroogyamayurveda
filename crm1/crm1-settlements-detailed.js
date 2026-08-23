@@ -32,12 +32,12 @@
   async function loadPartners(){
     var sel=$('crm1SetDPartner');if(!sel)return;
     try{
-      var r1=await window.sb.from('dealers').select('id,dealer_name').eq('is_active',true);
-      var r2=await window.sb.from('profiles').select('id,full_name,role').eq('is_active',true).in('role',['courier_manager','dealer']);
+      var r1=await window.sb.from('dealers').select('id,dealer_name').eq('is_active',true).order('dealer_name');
+      var r2=await window.sb.from('profiles').select('id,full_name,role').eq('is_active',true).eq('role','courier_manager').order('full_name');
       if(r1.error)throw r1.error;if(r2.error)throw r2.error;
       var html='<option value="">Select Partner</option>';
       html+=(r1.data||[]).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.dealer_name)+' (Dealer)</option>'}).join('');
-      html+=(r2.data||[]).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.full_name)+' ('+esc(x.role)+')</option>'}).join('');
+      html+=(r2.data||[]).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.full_name)+' (Courier)</option>'}).join('');
       sel.innerHTML=html;
     }catch(e){sel.innerHTML='<option value="">Unable to load partners</option>'}
   }
