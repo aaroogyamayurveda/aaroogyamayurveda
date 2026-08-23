@@ -1,22 +1,41 @@
-/* CRM1 advanced module bootstrap: non-blocking stable loader with startup main-view staging. */
+/* CRM1 advanced module bootstrap: atomic startup + guarded module timeouts.
+   The application remains on its base loading screen until the complete module set is ready.
+   This prevents Manager Reports/other pages from flashing during startup and still avoids
+   a permanent lock if a non-critical module fails or times out.
+*/
 (function(){
   'use strict';
-  var started=false;
-  if(started)return;started=true;
-  /* Hide only the main content briefly while the authoritative navigation layer
-     selects Dashboard. This prevents transient Manager Reports/other page flicker,
-     while leaving the sidebar/topbar visible. */
-  (function stageMain(){
-    var styleId='crm1StartupMainStage';
-    if(document.getElementById(styleId))return;
-    var st=document.createElement('style');st.id=styleId;st.textContent='.main.crm1-startup-staged{visibility:hidden!important}';
-    (document.head||document.documentElement).appendChild(st);
-    function apply(){var m=document.querySelector('.main');if(m)m.classList.add('crm1-startup-staged')}
-    function release(force){var m=document.querySelector('.main');if(!m)return false;var dash=m.querySelector('#dashboard.active');if(dash||force){m.classList.remove('crm1-startup-staged');var s=document.getElementById(styleId);if(s)s.remove();return true}return false}
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply,{once:true});else apply();
-    var tries=0,t=setInterval(function(){tries++;if(release(false)||tries>=20){clearInterval(t);release(true)}},50);
-  })();
-  function load(src,timeout){return new Promise(function(resolve){var done=false,s=document.createElement('script'),tm=setTimeout(function(){if(done)return;done=true;console.warn('CRM1 module timeout:',src);resolve(false)},timeout||8000);function finish(ok){if(done)return;done=true;clearTimeout(tm);resolve(ok)}s.src=src;s.async=false;s.onload=function(){finish(true)};s.onerror=function(){console.error('CRM1 module failed:',src);finish(false)};document.head.appendChild(s)})}
+  var GATE_ID='crm1AdvancedBootGate',MAX_TOTAL_WAIT=30000,PER_MODULE_WAIT=7000,resolveReady;
+  if(!(window.crm1AdvancedReady&&typeof window.crm1AdvancedReady.then==='function')){
+    window.crm1AdvancedReady=new Promise(function(resolve){resolveReady=resolve});
+    window.crm1AdvancedReadyResolve=function(){if(resolveReady){resolveReady();resolveReady=null}};
+  }
+  function lock(){
+    if(document.getElementById(GATE_ID))return;
+    var style=document.createElement('style');
+    style.id=GATE_ID;
+    style.textContent='#app{visibility:hidden!important;opacity:0!important;pointer-events:none!important}.crm1-boot-loader{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:#f4f7f4;color:#164b30;font:700 16px system-ui,-apple-system,Segoe UI,Arial,sans-serif}.crm1-boot-loader span{background:#fff;border:1px solid #dfe7e1;border-radius:14px;padding:16px 20px;box-shadow:0 12px 35px rgba(22,75,48,.10)}';
+    document.head.appendChild(style);
+    var loader=document.createElement('div');
+    loader.id='crm1AdvancedBootLoader';loader.className='crm1-boot-loader';
+    loader.innerHTML='<span>Loading Aaroogyam CRM…</span>';
+    document.body.appendChild(loader);
+  }
+  function unlock(){
+    document.getElementById(GATE_ID)?.remove();
+    document.getElementById('crm1AdvancedBootLoader')?.remove();
+    try{window.crm1AdvancedReadyResolve?.()}catch(e){}
+  }
+  function load(src,timeout){
+    return new Promise(function(resolve){
+      var done=false,s=document.createElement('script'),tm=setTimeout(function(){
+        if(done)return;done=true;console.warn('CRM1 module timeout:',src);resolve(false);
+      },timeout||PER_MODULE_WAIT);
+      function finish(ok){if(done)return;done=true;clearTimeout(tm);resolve(ok)}
+      s.src=src;s.async=false;s.onload=function(){finish(true)};s.onerror=function(){console.error('CRM1 module failed:',src);finish(false)};
+      document.head.appendChild(s);
+    });
+  }
   var modules=[
     './advanced-business-layer.core.js',
     './crm1-followup-verification-fix.js',
@@ -45,8 +64,13 @@
     './crm1-production-suite.js?v=1',
     './crm1-production-suite-retry-v2.js?v=1',
     './crm1-render-stability.js?v=4',
-    './crm1-navigation-ui-v8.js?v=2',
-    './crm1-ist-ops-fix-v3.js?v=4'
+    './crm1-navigation-ui-v8.js?v=3',
+    './crm1-ist-ops-fix-v3.js?v=5'
   ];
-  (async function(){for(var i=0;i<modules.length;i++)await load(modules[i],7000);window.crm1AdvancedReady=true})();
+  lock();
+  var totalTimer=setTimeout(function(){console.warn('CRM1 advanced startup total timeout');unlock()},MAX_TOTAL_WAIT);
+  (async function(){
+    try{for(var i=0;i<modules.length;i++)await load(modules[i],PER_MODULE_WAIT)}
+    finally{clearTimeout(totalTimer);unlock()}
+  })();
 })();
