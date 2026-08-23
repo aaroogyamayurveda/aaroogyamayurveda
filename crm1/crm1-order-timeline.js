@@ -5,6 +5,68 @@
   function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]})}
   function fmt(v){return v?new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',dateStyle:'medium',timeStyle:'short'}).format(new Date(v)):'-'}
 
+  function buildEvents(o, histories){
+    var events=[];
+    // The creation event must always represent the initial order status,
+    // not the order's current status after later assignments/updates.
+    events.push({
+      at:o.created_at||o.order_date,
+      event:'Order Created',
+      status:'new',
+      details:[o.order_type,o.order_priority,o.verification_status,o.total_amount!=null?'₹'+Number(o.total_amount).toLocaleString('en-IN'):''].filter(Boolean).join(' · ')
+    });
+
+    // Reconstruct missing old_status values from the previous known status.
+    // Older CRM history rows often stored only new_status. Also suppress
+    // duplicate rows that repeat the same status without a real transition.
+    var current='new';
+    var createdTs=new Date(o.created_at||o.order_date).getTime();
+    var seenTransitionKeys={};
+    (histories||[]).forEach(function(h){
+      var next=String(h.new_status||'').trim();
+      if(!next)return;
+      var atTs=new Date(h.created_at).getTime();
+      var old=String(h.old_status||'').trim()||current;
+
+      // The initial "new" history row is already represented by Order Created.
+      if(next==='new' && current==='new' && Number.isFinite(atTs) && Number.isFinite(createdTs) && Math.abs(atTs-createdTs)<120000){
+        current='new';
+        return;
+      }
+
+      // Ignore exact duplicate transitions (for example two assigned rows
+      // written by separate assignment/history hooks for the same action).
+      var key=next+'|'+(h.created_at||'');
+      if(next===current || seenTransitionKeys[key]){
+        return;
+      }
+      seenTransitionKeys[key]=true;
+
+      var eventName='Status Change';
+      var details=h.remarks||'Updated';
+      if(next==='verified'){
+        eventName='Verification';
+        details=h.remarks||'Order verified';
+      }else if(next==='assigned'){
+        eventName='Assignment';
+        details=h.remarks||'Order assigned';
+        if(o.dealer_id && o.dealers && o.dealers.dealer_name)details='Dealer: '+o.dealers.dealer_name;
+        else if(o.courier_manager_id)details='Courier Manager assigned';
+      }
+
+      events.push({
+        at:h.created_at,
+        event:eventName,
+        status:old+' → '+next,
+        details:details
+      });
+      current=next;
+    });
+
+    events.sort(function(a,b){return new Date(a.at)-new Date(b.at)});
+    return events;
+  }
+
   async function searchInto(term,out,msg){
     term=String(term||'').trim();
     if(!term){msg.textContent='Order No ya 10 digit mobile number डालें.';out.innerHTML='';return;}
@@ -23,17 +85,17 @@
         if(qr2.error)throw qr2.error;orders=qr2.data||[];
       }
       if(!orders.length){msg.textContent='No order found.';msg.className='sub';return;}
+
       var ids2=orders.map(function(o){return o.id});
       var hr=await window.sb.from('order_status_history').select('id,order_id,old_status,new_status,remarks,changed_by,created_at').in('order_id',ids2).order('created_at',{ascending:true});
       if(hr.error)throw hr.error;
-      var histories=hr.data||[];var grouped={};histories.forEach(function(h){(grouped[h.order_id]||(grouped[h.order_id]=[])).push(h)});
+      var histories=hr.data||[],grouped={};
+      histories.forEach(function(h){(grouped[h.order_id]||(grouped[h.order_id]=[])).push(h)});
+
       out.innerHTML=orders.map(function(o){
-        var events=[{at:o.created_at||o.order_date,event:'Order Created',status:o.order_status||'new',details:[o.order_type,o.order_priority,o.verification_status,o.total_amount!=null?'₹'+Number(o.total_amount).toLocaleString('en-IN'):'',o.remarks].filter(Boolean).join(' · ')}];
-        (grouped[o.id]||[]).forEach(function(h){events.push({at:h.created_at,event:'Status Change',status:(h.old_status||'—')+' → '+(h.new_status||'—'),details:h.remarks||'Updated'})});
-        if(o.updated_at&&o.updated_at!==o.created_at&&!(grouped[o.id]||[]).length)events.push({at:o.updated_at,event:'Order Updated',status:o.order_status||'-',details:'Order updated'});
-        events.sort(function(a,b){return new Date(a.at)-new Date(b.at)});
+        var events=buildEvents(o,grouped[o.id]||[]);
         var customer=o.customers||{};
-        return '<div class="panel"><div class="title"><div><h3 style="margin:0">Order #'+esc(o.order_no)+'</h3><div class="sub">'+esc(customer.customer_name||'-')+' · '+esc(customer.mobile||'-')+' · '+esc(o.order_status||'-')+'</div></div></div><div class="sub" style="margin-bottom:12px">Agent: '+esc(o.profiles&&o.profiles.full_name||'-')+' | Dealer: '+esc(o.dealers&&o.dealers.dealer_name||'-')+' | Amount: ₹'+Number(o.total_amount||0).toLocaleString('en-IN')+'</div><div class="tablewrap"><table><thead><tr><th>Date / Time</th><th>Event</th><th>Status</th><th>Details</th></tr></thead><tbody>'+events.map(function(e){return '<tr><td>'+esc(fmt(e.at))+'</td><td><b>'+esc(e.event)+'</b></td><td><span class="pill">'+esc(e.status)+'</span></td><td>'+esc(e.details||'-')+'</td></tr>'}).join('')+'</tbody></table></div></div>';
+        return '<div class="panel"><div class="title"><div><h3 style="margin:0">Order #'+esc(o.order_no)+'</h3><div class="sub">'+esc(customer.customer_name||'-')+' · '+esc(customer.mobile||'-')+' · Current Status: '+esc(o.order_status||'-')+'</div></div></div><div class="sub" style="margin-bottom:12px">Agent: '+esc(o.profiles&&o.profiles.full_name||'-')+' | Dealer: '+esc(o.dealers&&o.dealers.dealer_name||'-')+' | Amount: ₹'+Number(o.total_amount||0).toLocaleString('en-IN')+'</div><div class="tablewrap"><table><thead><tr><th>Date / Time</th><th>Event</th><th>Status</th><th>Details</th></tr></thead><tbody>'+events.map(function(e){return '<tr><td>'+esc(fmt(e.at))+'</td><td><b>'+esc(e.event)+'</b></td><td><span class="pill">'+esc(e.status)+'</span></td><td>'+esc(e.details||'-')+'</td></tr>'}).join('')+'</tbody></table></div></div>';
       }).join('');
       msg.textContent=orders.length+' order'+(orders.length===1?'':'s')+' found.';msg.className='sub';
     }catch(e){msg.textContent='Timeline error: '+(e.message||e);msg.className='msg'}
