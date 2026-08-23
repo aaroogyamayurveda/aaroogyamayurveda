@@ -4,9 +4,12 @@
 const db=()=>window.sb;
 const managerRoles=['super_admin','management','order_manager'];
 const $=id=>document.getElementById(id);
-const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-const isoDate=d=>{const x=new Date(d);return x.toISOString().slice(0,10)};
-const today=()=>isoDate(new Date());
+const esc=v=>String(v==null?'':v).replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'}[m]));
+const TZ='Asia/Kolkata';
+const istDate=d=>new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d?new Date(d):new Date());
+const nextISTDate=s=>{const d=new Date(s+'T00:00:00+05:30');d.setUTCDate(d.getUTCDate()+1);return new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'}).format(d)};
+const istBounds=(from,to)=>{const f=from||istDate(),t=to||f;const a=new Date(f+'T00:00:00+05:30').toISOString(),b=new Date(nextISTDate(t)+'T00:00:00+05:30').toISOString();return a<=b?{start:a,end:b}:{start:b,end:a}};
+const today=()=>istDate();
 function page(){
  let p=$('crm1ManagerReports');
  if(p)return p;
@@ -31,13 +34,13 @@ function show(){page();document.querySelectorAll('.page').forEach(p=>p.classList
 async function load(){
  const msg=$('crm1RptMsg');if(!msg)return;
  const from=$('crm1RptFrom').value||today(),to=$('crm1RptTo').value||today();
- const start=new Date(from+'T00:00:00').toISOString(),end=new Date(to+'T23:59:59.999').toISOString();
+ const bounds=istBounds(from,to);
  msg.textContent='Generating report...';msg.className='crm1wf2-msg';
  try{
   const [leadsR,intR,ordersR,agentsR]=await Promise.all([
-   db().from('crm_leads').select('id,assigned_to,lead_status,assigned_at,first_contact_at,created_at').gte('created_at',start).lte('created_at',end),
-   db().from('crm_interactions').select('id,agent_id,status,disposition,created_at,started_at').gte('created_at',start).lte('created_at',end),
-   db().from('orders').select('id,order_no,agent_id,order_status,verification_status,created_at').gte('created_at',start).lte('created_at',end),
+   db().from('crm_leads').select('id,assigned_to,lead_status,assigned_at,first_contact_at,created_at').gte('created_at',bounds.start).lt('created_at',bounds.end),
+   db().from('crm_interactions').select('id,agent_id,status,disposition,created_at,started_at').gte('created_at',bounds.start).lt('created_at',bounds.end),
+   db().from('orders').select('id,order_no,agent_id,order_status,verification_status,created_at').gte('created_at',bounds.start).lt('created_at',bounds.end),
    db().from('profiles').select('id,full_name,email').eq('is_active',true).eq('role','agent').order('full_name')
   ]);
   for(const r of [leadsR,intR,ordersR,agentsR])if(r.error)throw r.error;
@@ -56,7 +59,7 @@ async function load(){
   $('crm1RptDispBody').innerHTML=Object.entries(disp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join('')||'<tr><td colspan="2" class="empty">No dispositions</td></tr>';
   const os={};orders.forEach(x=>{const k=(x.order_status||'-')+'|'+(x.verification_status||'-');os[k]=(os[k]||0)+1;});
   $('crm1RptOrderBody').innerHTML=Object.entries(os).map(([k,v])=>{const [a,b]=k.split('|');return `<tr><td>${esc(a)}</td><td>${esc(b)}</td><td>${v}</td></tr>`}).join('')||'<tr><td colspan="3" class="empty">No orders</td></tr>';
-  msg.textContent=`Report generated: ${from} to ${to}`;
+  msg.textContent=`Report generated: ${from} to ${to} (IST)`;
  }catch(e){msg.textContent=e?.message||String(e);msg.className='crm1wf2-msg err';}
 }
 function boot(){
