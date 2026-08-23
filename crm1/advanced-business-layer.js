@@ -1,7 +1,7 @@
 /* CRM1 advanced module bootstrap: atomic startup + guarded module timeouts.
    The application remains on its base loading screen until the complete module set is ready.
-   This prevents Manager Reports/other pages from flashing during startup and still avoids
-   a permanent lock if a non-critical module fails or times out.
+   This prevents intermediate page flashes while still avoiding a permanent lock if a module
+   fails to load or exceeds its per-module timeout.
 */
 (function(){
   'use strict';
@@ -64,8 +64,8 @@
     './crm1-production-suite.js?v=1',
     './crm1-production-suite-retry-v2.js?v=1',
     './crm1-render-stability.js?v=4',
-    './crm1-navigation-ui-v8.js?v=3',
-    './crm1-ist-ops-fix-v3.js?v=5'
+    './crm1-navigation-ui-v8.js?v=4',
+    './crm1-ist-ops-fix.js?v=6'
   ];
   lock();
   var totalTimer=setTimeout(function(){console.warn('CRM1 advanced startup total timeout');unlock()},MAX_TOTAL_WAIT);
