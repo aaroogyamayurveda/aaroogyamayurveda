@@ -29,5 +29,5 @@
   await load('./crm1-manager-reports.js?v=1');
   await load('./crm1-order-timeline.js?v=4');
   await load('./crm1-delivery-workflow.js?v=1');
-  await load('./crm1-customer360-timeline-cleanup.js?v=4');
+  /* Customer 360 is now normalized at source; the DOM cleanup module is intentionally not loaded. */
 })();
