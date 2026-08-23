@@ -1,4 +1,4 @@
-/* CRM1 QA detailed: QA review dashboard and agent-wise quality performance. */
+/* CRM1 QA detailed: QA review dashboard + QA review creation. */
 (function(){
   'use strict';
   var started=false,guardInstalled=false,timer=null;
@@ -14,18 +14,60 @@
       '<div class="panel"><div class="crm1-toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'+
       '<label>From <input id="crm1QAFrom" type="date"></label><label>To <input id="crm1QATo" type="date"></label>'+ 
       '<select id="crm1QAAgent"><option value="">All Agents</option></select><select id="crm1QADisp"><option value="">All Dispositions</option></select>'+ 
-      '<button class="btn" id="crm1QAApply">Apply</button><button class="btn alt" id="crm1QAToday">Today</button></div></div>'+ 
+      '<button class="btn" id="crm1QAApply">Apply</button><button class="btn alt" id="crm1QAToday">Today</button><button class="btn" id="crm1QANew">+ New QA Review</button></div></div>'+ 
       '<div class="cards" id="crm1QAKpis"></div>'+ 
       '<div class="panel"><h3>Agent Quality Performance</h3><div class="tablewrap"><table><thead><tr><th>Rank</th><th>Agent</th><th>Reviews</th><th>Avg Score</th><th>Pass</th><th>Fail</th><th>Pass %</th></tr></thead><tbody id="crm1QAAgentBody"></tbody></table></div></div>'+ 
       '<div class="panel"><h3>QA Review Details</h3><div class="tablewrap"><table><thead><tr><th>Date</th><th>Agent</th><th>Order</th><th>Score</th><th>Disposition</th><th>Reviewer</th><th>Remarks</th></tr></thead><tbody id="crm1QABody"></tbody></table></div></div>'+ 
+      '<div class="panel hidden" id="crm1QAFormPanel"><h3 id="crm1QAFormTitle">New QA Review</h3><div class="grid3">'+
+      '<div class="field"><label>Agent *</label><select id="crm1QAFormAgent"><option value="">Select Agent</option></select></div>'+ 
+      '<div class="field"><label>Order</label><select id="crm1QAFormOrder"><option value="">No Order</option></select></div>'+ 
+      '<div class="field"><label>Score *</label><input id="crm1QAFormScore" type="number" min="0" max="100" step="0.1" placeholder="0-100"></div>'+ 
+      '<div class="field"><label>Disposition</label><input id="crm1QAFormDisp" placeholder="Pass / Fail / Coaching etc."></div>'+ 
+      '<div class="field wide"><label>Reviewer Remarks</label><textarea id="crm1QAFormRemarks" rows="3" placeholder="QA observations"></textarea></div>'+ 
+      '</div><div class="actions"><button class="btn alt" id="crm1QACancel">Cancel</button><button class="btn" id="crm1QASave">Save Review</button></div></div>'+ 
       '</div>';
     var t=today(); $('crm1QAFrom').value=t;$('crm1QATo').value=t;
     $('crm1QAApply').onclick=load;$('crm1QAToday').onclick=function(){$('crm1QAFrom').value=today();$('crm1QATo').value=today();load()};
-    loadAgents().then(function(){loadDispositions().then(load)});
+    $('crm1QANew').onclick=openForm;$('crm1QACancel').onclick=closeForm;$('crm1QASave').onclick=saveReview;
+    loadAgents().then(function(){loadDispositions().then(function(){loadOrdersForForm().then(load)})});
     return true;
   }
-  async function loadAgents(){var s=$('crm1QAAgent');if(!s)return;try{var r=await window.sb.from('profiles').select('id,full_name').eq('is_active',true).eq('role','agent').order('full_name');if(r.error)throw r.error;s.innerHTML='<option value="">All Agents</option>'+(r.data||[]).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>'}).join('')}catch(e){s.innerHTML='<option value="">Agent load error</option>'}}
-  async function loadDispositions(){var s=$('crm1QADisp');if(!s)return;try{var r=await window.sb.from('qa_reviews').select('disposition').not('disposition','is',null).order('disposition');if(r.error)throw r.error;var vals=[...new Set((r.data||[]).map(function(x){return x.disposition}).filter(Boolean))];s.innerHTML='<option value="">All Dispositions</option>'+vals.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>'}).join('')}catch(e){s.innerHTML='<option value="">All Dispositions</option>'}}
+  async function loadAgents(){
+    var selects=[$('crm1QAAgent'),$('crm1QAFormAgent')];if(!selects[0]||!selects[1])return;
+    try{var r=await window.sb.from('profiles').select('id,full_name').eq('is_active',true).eq('role','agent').order('full_name');if(r.error)throw r.error;var html='<option value="">Select Agent</option>'+(r.data||[]).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>'}).join('');selects[0].innerHTML='<option value="">All Agents</option>'+(r.data||[]).map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>'}).join('');selects[1].innerHTML=html}catch(e){selects[0].innerHTML='<option value="">Agent load error</option>';selects[1].innerHTML='<option value="">Agent load error</option>'}
+  }
+  async function loadDispositions(){
+    var s=$('crm1QADisp');if(!s)return;try{var r=await window.sb.from('qa_reviews').select('disposition').not('disposition','is',null).order('disposition');if(r.error)throw r.error;var vals=[...new Set((r.data||[]).map(function(x){return x.disposition}).filter(Boolean))];s.innerHTML='<option value="">All Dispositions</option>'+vals.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>'}).join('')}catch(e){s.innerHTML='<option value="">All Dispositions</option>'}}
+  async function loadOrdersForForm(){
+    var s=$('crm1QAFormOrder');if(!s)return;try{var r=await window.sb.from('orders').select('id,order_no,order_status,customers(customer_name)').order('order_date',{ascending:false}).limit(300);if(r.error)throw r.error;s.innerHTML='<option value="">No Order</option>'+(r.data||[]).map(function(x){var label='#'+x.order_no+' · '+(x.customers?.customer_name||'-')+' · '+(x.order_status||'-');return '<option value="'+esc(x.id)+'">'+esc(label)+'</option>'}).join('')}catch(e){s.innerHTML='<option value="">Unable to load orders</option>'}}
+  function openForm(){
+    $('crm1QAFormPanel').classList.remove('hidden');
+    $('crm1QAFormPanel').scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  function closeForm(){
+    $('crm1QAFormPanel')?.classList.add('hidden');
+    if($('crm1QAFormScore'))$('crm1QAFormScore').value='';
+    if($('crm1QAFormDisp'))$('crm1QAFormDisp').value='';
+    if($('crm1QAFormRemarks'))$('crm1QAFormRemarks').value='';
+    if($('crm1QAFormOrder'))$('crm1QAFormOrder').value='';
+    if($('crm1QAFormAgent'))$('crm1QAFormAgent').value='';
+  }
+  async function saveReview(){
+    var agent=$('crm1QAFormAgent')?.value||'',order=$('crm1QAFormOrder')?.value||null,score=$('crm1QAFormScore')?.value,disp=$('crm1QAFormDisp')?.value.trim()||null,remarks=$('crm1QAFormRemarks')?.value.trim()||null;
+    if(!agent)return alert('Agent required');
+    if(score===''||score==null||Number(score)<0||Number(score)>100)return alert('Score must be between 0 and 100');
+    var btn=$('crm1QASave');btn.disabled=true;btn.textContent='Saving...';
+    try{
+      var me=null;try{var u=await window.sb.auth.getUser();me=u.data?.user||null}catch(e){}
+      var payload={agent_id:agent,reviewed_by:me?.id||null,reviewer_id:me?.id||null,order_id:order,score:Number(score),remarks:remarks,disposition:disp,reviewer_note:remarks,reviewed_at:new Date().toISOString()};
+      var r=await window.sb.from('qa_reviews').insert(payload);
+      if(r.error){
+        var p2={agent_id:agent,reviewed_by:me?.id||null,order_id:order,score:Number(score),remarks:remarks,disposition:disp,reviewer_note:remarks,reviewed_at:new Date().toISOString()};
+        var r2=await window.sb.from('qa_reviews').insert(p2);if(r2.error)throw r2.error;
+      }
+      closeForm();load();alert('QA review saved successfully');
+    }catch(e){alert(e.message||e)}finally{btn.disabled=false;btn.textContent='Save Review'}
+  }
   async function load(){
     var body=$('crm1QABody');if(!body)return; body.innerHTML='<tr><td colspan="7" class="empty">Loading...</td></tr>';
     var from=$('crm1QAFrom')?.value||today(),to=$('crm1QATo')?.value||from;if(to<from){var z=from;from=to;to=z;$('crm1QAFrom').value=from;$('crm1QATo').value=to}
