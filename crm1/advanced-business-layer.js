@@ -46,7 +46,7 @@
     './crm1-navigation-ui-v8.js?v=5',
     './crm1-ist-ops-fix.js?v=6',
     './crm1-ist-ops-final-guard.js?v=2',
-    './crm1-verification-followup-stability-final.js?v=1'
+    './crm1-verification-followup-stability-final.js?v=2'
   ];
   lock();
   var totalTimer=setTimeout(function(){console.warn('CRM1 advanced startup total timeout');unlock()},MAX_TOTAL_WAIT);
