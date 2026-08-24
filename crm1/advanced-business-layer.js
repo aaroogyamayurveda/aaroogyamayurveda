@@ -1,8 +1,4 @@
-/* CRM1 advanced module bootstrap: atomic startup + guarded module timeouts.
-   The application remains on its base loading screen until the complete module set is ready.
-   This prevents intermediate page flashes while still avoiding a permanent lock if a module
-   fails to load or exceeds its per-module timeout.
-*/
+/* CRM1 advanced module bootstrap: atomic startup + guarded module timeouts. */
 (function(){
   'use strict';
   var GATE_ID='crm1AdvancedBootGate',MAX_TOTAL_WAIT=30000,PER_MODULE_WAIT=7000,resolveReady;
@@ -12,36 +8,19 @@
   }
   function lock(){
     if(document.getElementById(GATE_ID))return;
-    var style=document.createElement('style');
-    style.id=GATE_ID;
+    var style=document.createElement('style');style.id=GATE_ID;
     style.textContent='#app{visibility:hidden!important;opacity:0!important;pointer-events:none!important}.crm1-boot-loader{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;background:#f4f7f4;color:#164b30;font:700 16px system-ui,-apple-system,Segoe UI,Arial,sans-serif}.crm1-boot-loader span{background:#fff;border:1px solid #dfe7e1;border-radius:14px;padding:16px 20px;box-shadow:0 12px 35px rgba(22,75,48,.10)}';
     document.head.appendChild(style);
-    var loader=document.createElement('div');
-    loader.id='crm1AdvancedBootLoader';loader.className='crm1-boot-loader';
-    loader.innerHTML='<span>Loading Aaroogyam CRM…</span>';
-    document.body.appendChild(loader);
+    var loader=document.createElement('div');loader.id='crm1AdvancedBootLoader';loader.className='crm1-boot-loader';loader.innerHTML='<span>Loading Aaroogyam CRM…</span>';document.body.appendChild(loader);
   }
-  function unlock(){
-    document.getElementById(GATE_ID)?.remove();
-    document.getElementById('crm1AdvancedBootLoader')?.remove();
-    try{window.crm1AdvancedReadyResolve?.()}catch(e){}
-  }
-  function load(src,timeout){
-    return new Promise(function(resolve){
-      var done=false,s=document.createElement('script'),tm=setTimeout(function(){
-        if(done)return;done=true;console.warn('CRM1 module timeout:',src);resolve(false);
-      },timeout||PER_MODULE_WAIT);
-      function finish(ok){if(done)return;done=true;clearTimeout(tm);resolve(ok)}
-      s.src=src;s.async=false;s.onload=function(){finish(true)};s.onerror=function(){console.error('CRM1 module failed:',src);finish(false)};
-      document.head.appendChild(s);
-    });
-  }
+  function unlock(){document.getElementById(GATE_ID)?.remove();document.getElementById('crm1AdvancedBootLoader')?.remove();try{window.crm1AdvancedReadyResolve?.()}catch(e){}}
+  function load(src,timeout){return new Promise(function(resolve){var done=false,s=document.createElement('script'),tm=setTimeout(function(){if(done)return;done=true;console.warn('CRM1 module timeout:',src);resolve(false)},timeout||PER_MODULE_WAIT);function finish(ok){if(done)return;done=true;clearTimeout(tm);resolve(ok)}s.src=src;s.async=false;s.onload=function(){finish(true)};s.onerror=function(){console.error('CRM1 module failed:',src);finish(false)};document.head.appendChild(s)})}
   var modules=[
     './crm1-api-compat.js?v=1',
-    './crm1-ops-settlement-verification-stability.js?v=1',
+    './crm1-ops-settlement-verification-stability.js?v=2',
     './advanced-business-layer.core.js',
     './crm1-followup-verification-fix.js?v=2',
-    './crm1-followups-queue-fix.js',
+    './crm1-followups-queue-fix.js?v=2',
     './crm1-followup-customer-context-fix.js?v=2',
     './crm1-agent-workspace.js',
     './crm1-call-console.js?v=2',
@@ -66,13 +45,10 @@
     './crm1-render-stability.js?v=4',
     './crm1-navigation-ui-v8.js?v=5',
     './crm1-ist-ops-fix.js?v=6',
-    './crm1-ist-ops-final-guard.js?v=1',
+    './crm1-ist-ops-final-guard.js?v=2',
     './crm1-verification-followup-stability-final.js?v=1'
   ];
   lock();
   var totalTimer=setTimeout(function(){console.warn('CRM1 advanced startup total timeout');unlock()},MAX_TOTAL_WAIT);
-  (async function(){
-    try{for(var i=0;i<modules.length;i++)await load(modules[i],PER_MODULE_WAIT)}
-    finally{clearTimeout(totalTimer);unlock()}
-  })();
+  (async function(){try{for(var i=0;i<modules.length;i++)await load(modules[i],PER_MODULE_WAIT)}finally{clearTimeout(totalTimer);unlock()}})();
 })();
