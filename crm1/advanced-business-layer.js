@@ -4,7 +4,7 @@
   var GATE_ID='crm1AdvancedBootGate',MAX_TOTAL_WAIT=30000,PER_MODULE_WAIT=7000,resolveReady;
   if(!(window.crm1AdvancedReady&&typeof window.crm1AdvancedReady.then==='function')){
     window.crm1AdvancedReady=new Promise(function(resolve){resolveReady=resolve});
-    window.crm1AdvancedReadyResolve=function(){if(resolveReady){resolveReady=resolveReady;resolveReady=null}};
+    window.crm1AdvancedReadyResolve=function(){if(resolveReady){resolveReady();resolveReady=null}};
   }
   function lock(){
     if(document.getElementById(GATE_ID))return;
