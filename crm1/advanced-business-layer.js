@@ -4,7 +4,7 @@
   var GATE_ID='crm1AdvancedBootGate',MAX_TOTAL_WAIT=30000,PER_MODULE_WAIT=7000,resolveReady;
   if(!(window.crm1AdvancedReady&&typeof window.crm1AdvancedReady.then==='function')){
     window.crm1AdvancedReady=new Promise(function(resolve){resolveReady=resolve});
-    window.crm1AdvancedReadyResolve=function(){if(resolveReady){resolveReady();resolveReady=null}};
+    window.crm1AdvancedReadyResolve=function(){if(resolveReady){resolveReady=resolveReady;resolveReady=null}};
   }
   function lock(){
     if(document.getElementById(GATE_ID))return;
@@ -19,9 +19,8 @@
     './crm1-api-compat.js?v=1',
     './crm1-ops-settlement-verification-stability.js?v=2',
     './advanced-business-layer.core.js',
-    './crm1-followup-verification-fix.js?v=2',
-    './crm1-followups-queue-fix.js?v=2',
-    './crm1-followup-customer-context-fix.js?v=2',
+    './crm1-followups-queue-fix.js?v=3',
+    './crm1-followup-customer-context-fix.js?v=3',
     './crm1-agent-workspace.js',
     './crm1-call-console.js?v=2',
     './crm1-call-disposition.js',
@@ -30,7 +29,7 @@
     './crm1-telephony-bridge-readiness.js',
     './crm1-workforce-runtime.js?v=2',
     './crm1-workforce-ui-bridge.js?v=2',
-    './crm1-followup-lead-status-sync.js?v=1',
+    './crm1-followup-lead-status-sync.js?v=2',
     './crm1-order-assignment-verification-guard.js?v=1',
     './crm1-manager-reports.js?v=2',
     './crm1-order-timeline.js?v=4',
@@ -45,8 +44,8 @@
     './crm1-render-stability.js?v=4',
     './crm1-navigation-ui-v8.js?v=5',
     './crm1-ist-ops-fix.js?v=6',
-    './crm1-ist-ops-final-guard.js?v=2',
-    './crm1-verification-followup-stability-final.js?v=2'
+    './crm1-ist-ops-final-guard.js?v=3',
+    './crm1-verification-followup-stability-final.js?v=3'
   ];
   lock();
   var totalTimer=setTimeout(function(){console.warn('CRM1 advanced startup total timeout');unlock()},MAX_TOTAL_WAIT);
