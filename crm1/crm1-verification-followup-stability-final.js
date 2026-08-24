@@ -1,27 +1,25 @@
 /* CRM1 Verification Queue final interaction guard.
-   Keeps Verify + Reject + Follow-up actions present even if another renderer
-   replaces verificationContent or its table, without timers or full-page rerender.
+   Keeps exactly one Follow-up action present after any renderer replacement,
+   without timers, attribute observers, mouse-move refreshes or full-page rerender.
 */
 (function(){
   'use strict';
-  if(window.__crm1VerificationFollowupFinal) return;
-  window.__crm1VerificationFollowupFinal=true;
+  if(window.__crm1VerificationFollowupFinalV2) return;
+  window.__crm1VerificationFollowupFinalV2=true;
 
   var observer=null;
-  var adding=false;
+  var running=false;
+  var idCache={};
 
-  function root(){ return document.getElementById('verificationContent'); }
-  function page(){ return document.getElementById('verification'); }
-  function active(){
-    var p=page();
-    return !!(p && p.classList.contains('active'));
-  }
+  function page(){return document.getElementById('verification');}
+  function root(){return document.getElementById('verificationContent');}
+  function active(){var p=page();return !!(p&&p.classList.contains('active'));}
 
   function openFollowup(orderId){
     var db=window.sb||null;
-    if(!db){ alert('CRM session is not ready. Please try again.'); return; }
+    if(!db){alert('CRM session is not ready. Please try again.');return;}
     document.getElementById('crm1FinalFollowupModal')?.remove();
-    var now=new Date(Date.now()+3600000); now.setSeconds(0,0);
+    var now=new Date(Date.now()+3600000);now.setSeconds(0,0);
     var modal=document.createElement('div');
     modal.id='crm1FinalFollowupModal';
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
@@ -45,10 +43,10 @@
       var dt=document.getElementById('crm1FinalFollowupDate').value;
       var note=(document.getElementById('crm1FinalFollowupNote').value||'').trim()||'Customer follow-up';
       if(!dt){alert('Please select follow-up date and time.');return;}
-      save.disabled=true; save.textContent='Saving...';
+      save.disabled=true;save.textContent='Saving...';
       try{
         var r=await db.from('orders').select('customer_id').eq('id',orderId).maybeSingle();
-        if(r.error||!r.data) throw new Error(r.error?.message||'Order not found');
+        if(r.error||!r.data)throw new Error(r.error?.message||'Order not found');
         var iso=new Date(dt).toISOString();
         var u=await db.auth.getUser();
         var ins=await db.from('followups').insert({
@@ -60,71 +58,98 @@
           notes:note,
           status:'pending'
         });
-        if(ins.error) throw ins.error;
+        if(ins.error)throw ins.error;
         await db.from('orders').update({next_followup_at:iso}).eq('id',orderId);
         close();
         alert('Follow-up scheduled successfully.');
       }catch(e){
         alert(e?.message||String(e));
-        save.disabled=false; save.textContent='Schedule';
+        save.disabled=false;save.textContent='Schedule';
       }
     };
   }
 
-  function ensureButtons(){
-    if(!active()||adding) return;
+  async function resolveOrderId(row){
+    var button=row.querySelector('button[data-id]');
+    if(button&&button.getAttribute('data-id'))return button.getAttribute('data-id');
+    var cells=row.querySelectorAll('td');
+    var match=(cells[0]?.textContent||'').match(/\d+/);
+    if(!match||!window.sb)return null;
+    var orderNo=String(Number(match[0]));
+    if(idCache[orderNo])return idCache[orderNo];
+    var r=await window.sb.from('orders').select('id').eq('order_no',Number(orderNo)).maybeSingle();
+    if(r.error||!r.data)return null;
+    idCache[orderNo]=r.data.id;
+    return r.data.id;
+  }
+
+  async function ensureButtons(){
+    if(!active()||running)return;
     var r=root();
-    if(!r) return;
-    var rows=r.querySelectorAll('tbody tr');
-    if(!rows.length) return;
-    adding=true;
+    if(!r)return;
+    var rows=[...r.querySelectorAll('tbody tr')].filter(function(row){return row.querySelectorAll('td').length>0;});
+    if(!rows.length)return;
+    running=true;
     try{
-      rows.forEach(function(row){
+      for(var i=0;i<rows.length;i++){
+        var row=rows[i];
         var cells=row.querySelectorAll('td');
-        if(!cells.length) return;
-        var verify=row.querySelector('button.crm1VerifyFix[data-id]');
-        var reject=row.querySelector('button.crm1VerifyFix[data-v="failed"]');
-        if(!verify && !reject) return;
         var action=cells[cells.length-1];
-        if(!action) return;
-        if(action.querySelector('.crm1FinalFollowupBtn')) return;
-        var orderId=(verify||reject)?.getAttribute('data-id');
-        if(!orderId) return;
-        var b=document.createElement('button');
-        b.type='button';
-        b.className='crm1-mini crm1FinalFollowupBtn';
-        b.setAttribute('data-id',orderId);
-        b.textContent='Follow-up';
-        b.style.marginLeft='4px';
-        b.onclick=function(){openFollowup(orderId);};
-        action.appendChild(b);
-      });
-    }finally{adding=false;}
+        if(!action)continue;
+
+        var buttons=[...action.querySelectorAll('button')];
+        var followups=buttons.filter(function(b){
+          return b.classList.contains('crm1FinalFollowupBtn') ||
+                 b.classList.contains('crm1FollowFromVerify') ||
+                 /^follow\s*-?\s*up$/i.test((b.textContent||'').trim());
+        });
+
+        if(followups.length>1){
+          followups.slice(1).forEach(function(b){b.remove();});
+          followups=followups.slice(0,1);
+        }
+        if(followups.length===1)continue;
+
+        buttons=[...action.querySelectorAll('button')];
+        var verify=buttons.find(function(b){return b.classList.contains('crm1VerifyFix')&&b.getAttribute('data-v')==='verified' || /^verify$/i.test((b.textContent||'').trim());});
+        var reject=buttons.find(function(b){return b.classList.contains('crm1VerifyFix')&&b.getAttribute('data-v')==='failed' || /^reject$/i.test((b.textContent||'').trim());});
+        if(!verify&&!reject)continue;
+
+        var orderId=null;
+        if(verify)orderId=verify.getAttribute('data-id');
+        if(!orderId&&reject)orderId=reject.getAttribute('data-id');
+        if(!orderId)orderId=await resolveOrderId(row);
+        if(!orderId)continue;
+
+        var follow=document.createElement('button');
+        follow.type='button';
+        follow.className='crm1-mini crm1FinalFollowupBtn';
+        follow.setAttribute('data-id',orderId);
+        follow.textContent='Follow-up';
+        follow.style.marginLeft='4px';
+        follow.onclick=function(id){return function(){openFollowup(id);};}(orderId);
+        action.appendChild(follow);
+      }
+    }finally{running=false;}
   }
 
   function boot(){
     var p=page();
-    if(!p) return;
-    if(observer) observer.disconnect();
+    if(!p)return;
+    if(observer)observer.disconnect();
     observer=new MutationObserver(function(){
-      if(active()&&!adding) ensureButtons();
+      if(active()&&!running)ensureButtons();
     });
-    // Observe the whole Verification page, not only verificationContent.
-    // Other renderers may replace verificationContent itself; observing its parent
-    // keeps the Follow-up action alive after that replacement.
     observer.observe(p,{childList:true,subtree:true});
-    if(active()) ensureButtons();
+    if(active())ensureButtons();
   }
 
   document.addEventListener('click',function(e){
     var b=e.target.closest('button');
-    if(!b) return;
-    if(/verification queue/i.test(b.textContent||'')){
-      setTimeout(boot,120);
-    }
+    if(b&&/verification queue/i.test(b.textContent||''))setTimeout(boot,120);
   },true);
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
   else boot();
 
   window.crm1EnsureVerificationFollowup=ensureButtons;
