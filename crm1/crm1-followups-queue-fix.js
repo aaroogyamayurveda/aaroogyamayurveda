@@ -8,8 +8,10 @@ const isActive=s=>['pending','open','scheduled','followup'].includes(String(s||'
 const norm=s=>String(s||'').toLowerCase().replace(/[,.]/g,'').replace(/\s+/g,' ').trim();
 const istKey=v=>{const d=new Date(v);return Number.isNaN(d)?'':norm(new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}).format(d))};
 function col(t,n){return[...t.querySelectorAll('thead th')].findIndex(h=>new RegExp('^'+n+'$','i').test(h.textContent.trim()))}
+async function hasSession(db){try{const r=await db.auth.getSession();return !!r?.data?.session}catch(_){return false}}
 async function load(force=false){
  const db=window.sb;if(!db)return cache;
+ if(!(await hasSession(db)))return cache;
  if(!force&&cache.length&&Date.now()-cacheAt<TTL)return cache;
  if(loadPromise)return loadPromise;
  loadPromise=db.from('followups').select('id,order_id,customer_id,followup_at,status,note,notes,customers(customer_name,mobile)').in('status',['pending','open','scheduled','followup']).order('followup_at',{ascending:true}).limit(1000)
@@ -60,7 +62,13 @@ function observe(){
  observer=new MutationObserver(()=>{if(!suppressObserver&&active())schedule(20)});
  observer.observe(root,{childList:true,subtree:true,characterData:true});
 }
-const boot=()=>{load();observe();if(active())begin()};
+async function boot(){
+ const db=window.sb;
+ if(!db){setTimeout(boot,500);return}
+ if(!(await hasSession(db))){setTimeout(boot,500);return}
+ observe();
+ if(active())begin();
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 window.crm1CleanFollowups=begin;
 })();
