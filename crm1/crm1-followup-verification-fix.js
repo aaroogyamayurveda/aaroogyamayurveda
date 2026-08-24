@@ -19,5 +19,26 @@
     modal.querySelector('#crm1FollowupSave').onclick=async()=>{const date=modal.querySelector('#crm1FollowupDate').value,note=modal.querySelector('#crm1FollowupNote').value.trim();if(!date){alert('Please select follow-up date and time.');return}const save=modal.querySelector('#crm1FollowupSave');save.disabled=true;save.textContent='Saving...';const iso=new Date(date).toISOString();const {data:order,error:oe}=await db.from('orders').select('customer_id').eq('id',orderId).maybeSingle();if(oe||!order){alert(oe?.message||'Order not found');save.disabled=false;save.textContent='Schedule';return}const {error}=await db.from('followups').insert({order_id:orderId,customer_id:order.customer_id||null,assigned_to:me?.id||null,followup_at:iso,note:note||'Customer follow-up',notes:note||'Customer follow-up',status:'pending'});if(error){alert(error.message);save.disabled=false;save.textContent='Schedule';return}await db.from('orders').update({next_followup_at:iso}).eq('id',orderId);close();await renderVerification();alert('Follow-up scheduled successfully.');};
   }
   async function renderVerification(){const c=$('verificationContent');if(!c||rendering)return;rendering=true;c.innerHTML='<div class="crm1-muted">Loading...</div>';try{const {data,error}=await db.from('orders').select('id,order_no,verification_status,total_amount,order_date,remarks,customers(customer_name,mobile)').order('order_date',{ascending:false}).limit(500);if(error)throw error;const base=(data||[]).filter(o=>!String(o.remarks||'').includes('[ENQUIRY]')&&String(o.verification_status||'pending')==='pending');const checks=await Promise.all(base.map(async o=>({o,active:await hasActiveFollowup(o.id)})));const rows=checks.filter(x=>!x.active).map(x=>x.o);c.innerHTML=`<div class="crm1-toolbar"><span class="crm1-badge warn">${rows.length} verification pending</span></div><div class="tablewrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Mobile</th><th>Amount</th><th>Created</th><th>Action</th></tr></thead><tbody>${rows.map(o=>`<tr><td>#${esc(o.order_no)}</td><td>${esc(o.customers?.customer_name||'-')}</td><td>${esc(o.customers?.mobile||'-')}</td><td>₹${Number(o.total_amount||0).toLocaleString('en-IN')}</td><td>${fmt(o.order_date)}</td><td><button class="crm1-mini crm1VerifyFix" data-id="${esc(o.id)}" data-v="verified">Verify</button> <button class="crm1-mini crm1VerifyFix" data-id="${esc(o.id)}" data-v="failed">Reject</button> <button class="crm1-mini crm1FollowFromVerify" data-id="${esc(o.id)}">Follow-up</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">No pending verification</td></tr>'}</tbody></table></div>`;c.querySelectorAll('.crm1FollowFromVerify').forEach(b=>b.onclick=()=>followupModal(b.dataset.id));c.querySelectorAll('.crm1VerifyFix').forEach(b=>b.onclick=async()=>{const v=b.dataset.v;if(v==='failed'&&!confirm('Reject this order verification?'))return;b.disabled=true;const payload={verification_status:v,verified_by:me?.id||null,verified_at:new Date().toISOString()};if(v==='verified')payload.order_status='new';const {error:updateError}=await db.from('orders').update(payload).eq('id',b.dataset.id);if(updateError){alert(updateError.message);b.disabled=false;return}await db.from('order_status_history').insert({order_id:b.dataset.id,new_status:v,changed_by:me?.id||null});await renderVerification();});}catch(e){c.innerHTML=`<div class="msg">Verification Queue load failed: ${esc(e?.message||e)}</div>`;}finally{rendering=false;}}
-  function activeVerification(){return $('verification')?.classList.contains('active');}document.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&/verification queue/i.test(b.textContent||''))setTimeout(renderVerification,80);},true);const observer=new MutationObserver(()=>{if(activeVerification())setTimeout(renderVerification,80);});const start=()=>observer.observe(document.body,{subtree:true,attributes:true,attributeFilter:['class']});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();window.crm1RenderVerificationFixed=renderVerification;
+
+  function activeVerification(){return $('verification')?.classList.contains('active');}
+
+  /* IMPORTANT: Do not observe arbitrary class mutations here.
+     Hover/focus/navigation UI changes can mutate class attributes and were causing
+     the entire Verification Queue to re-render on mouse movement. The queue must
+     only refresh on explicit actions or an explicit navigation into the page. */
+  document.addEventListener('click',e=>{
+    const b=e.target.closest('button');
+    if(!b)return;
+    if(/verification queue/i.test(b.textContent||'')){
+      setTimeout(()=>{if(activeVerification())renderVerification();},80);
+    }
+  },true);
+
+  function bootVerification(){
+    if(activeVerification())setTimeout(renderVerification,120);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootVerification,{once:true});
+  else bootVerification();
+
+  window.crm1RenderVerificationFixed=renderVerification;
 })();
