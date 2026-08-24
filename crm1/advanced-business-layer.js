@@ -40,7 +40,7 @@
     './crm1-api-compat.js?v=1',
     './crm1-ops-settlement-verification-stability.js?v=1',
     './advanced-business-layer.core.js',
-    './crm1-followup-verification-fix.js',
+    './crm1-followup-verification-fix.js?v=2',
     './crm1-followups-queue-fix.js',
     './crm1-followup-customer-context-fix.js?v=2',
     './crm1-agent-workspace.js',
