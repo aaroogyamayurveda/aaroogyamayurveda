@@ -20,6 +20,7 @@
     './crm1-api-compat.js?v=1',
     './crm1-ops-settlement-verification-stability.js?v=2',
     './advanced-business-layer.core.js',
+    './crm1-followup-verification-fix.js?v=3',
     './crm1-followups-queue-fix.js?v=3',
     './crm1-followup-customer-context-fix.js?v=3',
     './crm1-agent-workspace.js',
@@ -46,7 +47,7 @@
     './crm1-navigation-ui-v8.js?v=5',
     './crm1-ist-ops-fix.js?v=6',
     './crm1-ist-ops-final-guard.js?v=4',
-    './crm1-verification-followup-stability-final.js?v=4'
+    './crm1-verification-followup-stability-final.js?v=5'
   ];
   lock();
   var totalTimer=setTimeout(function(){console.warn('CRM1 advanced startup total timeout');unlock()},MAX_TOTAL_WAIT);
