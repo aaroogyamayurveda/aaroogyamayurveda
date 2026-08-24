@@ -4,7 +4,7 @@
   var GATE_ID='crm1AdvancedBootGate',MAX_TOTAL_WAIT=30000,PER_MODULE_WAIT=7000,resolveReady;
   if(!(window.crm1AdvancedReady&&typeof window.crm1AdvancedReady.then==='function')){
     window.crm1AdvancedReady=new Promise(function(resolve){resolveReady=resolve});
-    window.crm1AdvancedReadyResolve=function(){if(resolveReady){resolveReady();resolveReady=null}};
+    window.crm1AdvancedReadyResolve=function(){if(resolveReady){var r=resolveReady;resolveReady=null;r()}};
   }
   function lock(){
     if(document.getElementById(GATE_ID))return;
@@ -14,8 +14,9 @@
     var loader=document.createElement('div');loader.id='crm1AdvancedBootLoader';loader.className='crm1-boot-loader';loader.innerHTML='<span>Loading Aaroogyam CRM…</span>';document.body.appendChild(loader);
   }
   function unlock(){document.getElementById(GATE_ID)?.remove();document.getElementById('crm1AdvancedBootLoader')?.remove();try{window.crm1AdvancedReadyResolve?.()}catch(e){}}
-  function load(src,timeout){return new Promise(function(resolve){var done=false,s=document.createElement('script'),tm=setTimeout(function(){if(done)return;done=true;console.warn('CRM1 module timeout:',src);resolve(false)},timeout||PER_MODULE_WAIT);function finish(ok){if(done)return;done=true;clearTimeout(tm);resolve(ok)}s.src=src;s.async=false;s.onload=function(){finish(true)};s.onerror=function(){console.error('CRM1 module failed:',src);finish(false)};document.head.appendChild(s)})}
+  function load(src,timeout){return new Promise(function(resolve){var done=false,s=document.createElement('script'),tm=setTimeout(function(){if(done)return;done=true;console.warn('CRM1 module timeout:',src);resolve(false)},timeout||PER_MODULE_WAIT);function finish(ok){if(done)return;done=true;clearTimeout(tm);resolve(ok)}s.src=src;s.async=false;s.onload=async function(){try{if(/crm1-supabase-runtime-init\.js/i.test(src)&&window.crm1SupabaseReady){await window.crm1SupabaseReady}}catch(e){console.error('CRM1 runtime init failed:',e)}finish(true)};s.onerror=function(){finish(false)};document.head.appendChild(s)})}
   var modules=[
+    './crm1-supabase-runtime-init.js?v=1',
     './crm1-api-compat.js?v=1',
     './crm1-ops-settlement-verification-stability.js?v=2',
     './advanced-business-layer.core.js',
@@ -44,8 +45,8 @@
     './crm1-render-stability.js?v=4',
     './crm1-navigation-ui-v8.js?v=5',
     './crm1-ist-ops-fix.js?v=6',
-    './crm1-ist-ops-final-guard.js?v=3',
-    './crm1-verification-followup-stability-final.js?v=3'
+    './crm1-ist-ops-final-guard.js?v=4',
+    './crm1-verification-followup-stability-final.js?v=4'
   ];
   lock();
   var totalTimer=setTimeout(function(){console.warn('CRM1 advanced startup total timeout');unlock()},MAX_TOTAL_WAIT);
