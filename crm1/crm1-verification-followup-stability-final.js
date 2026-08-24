@@ -1,29 +1,25 @@
 /* CRM1 Verification Queue final interaction guard.
    Keeps Verify + Reject + Follow-up actions present even if another renderer
-   replaces the table, without re-rendering the whole page and without timers.
+   replaces verificationContent or its table, without timers or full-page rerender.
 */
 (function(){
   'use strict';
   if(window.__crm1VerificationFollowupFinal) return;
   window.__crm1VerificationFollowupFinal=true;
 
-  var db=window.sb||null;
   var observer=null;
   var adding=false;
 
   function root(){ return document.getElementById('verificationContent'); }
+  function page(){ return document.getElementById('verification'); }
   function active(){
-    var p=document.getElementById('verification');
+    var p=page();
     return !!(p && p.classList.contains('active'));
-  }
-  function esc(v){
-    return String(v==null?'':v).replace(/[&<>\"']/g,function(m){
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[m];
-    });
   }
 
   function openFollowup(orderId){
-    if(!db) return;
+    var db=window.sb||null;
+    if(!db){ alert('CRM session is not ready. Please try again.'); return; }
     document.getElementById('crm1FinalFollowupModal')?.remove();
     var now=new Date(Date.now()+3600000); now.setSeconds(0,0);
     var modal=document.createElement('div');
@@ -54,10 +50,11 @@
         var r=await db.from('orders').select('customer_id').eq('id',orderId).maybeSingle();
         if(r.error||!r.data) throw new Error(r.error?.message||'Order not found');
         var iso=new Date(dt).toISOString();
+        var u=await db.auth.getUser();
         var ins=await db.from('followups').insert({
           order_id:orderId,
           customer_id:r.data.customer_id||null,
-          assigned_to:(await db.auth.getUser()).data.user?.id||null,
+          assigned_to:u?.data?.user?.id||null,
           followup_at:iso,
           note:note,
           notes:note,
@@ -76,7 +73,8 @@
 
   function ensureButtons(){
     if(!active()||adding) return;
-    var r=root(); if(!r) return;
+    var r=root();
+    if(!r) return;
     var rows=r.querySelectorAll('tbody tr');
     if(!rows.length) return;
     adding=true;
@@ -89,8 +87,7 @@
         if(!verify && !reject) return;
         var action=cells[cells.length-1];
         if(!action) return;
-        var existing=action.querySelector('.crm1FinalFollowupBtn');
-        if(existing) return;
+        if(action.querySelector('.crm1FinalFollowupBtn')) return;
         var orderId=(verify||reject)?.getAttribute('data-id');
         if(!orderId) return;
         var b=document.createElement('button');
@@ -106,14 +103,17 @@
   }
 
   function boot(){
-    var r=root();
-    if(!r) return;
-    if(observer) return;
+    var p=page();
+    if(!p) return;
+    if(observer) observer.disconnect();
     observer=new MutationObserver(function(){
-      if(!adding) ensureButtons();
+      if(active()&&!adding) ensureButtons();
     });
-    observer.observe(r,{childList:true,subtree:true});
-    ensureButtons();
+    // Observe the whole Verification page, not only verificationContent.
+    // Other renderers may replace verificationContent itself; observing its parent
+    // keeps the Follow-up action alive after that replacement.
+    observer.observe(p,{childList:true,subtree:true});
+    if(active()) ensureButtons();
   }
 
   document.addEventListener('click',function(e){
