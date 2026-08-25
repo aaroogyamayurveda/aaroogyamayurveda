@@ -19,22 +19,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Inject advanced layer loader without replacing CRM1
+      - name: Inject cache-busted advanced layer loader without replacing CRM1
         shell: python
         run: |
           from pathlib import Path
           p = Path('crm1/index.html')
           text = p.read_text(encoding='utf-8')
-          tag = '<script src="./advanced-business-layer.js"></script>'
-          if tag not in text:
+          old = '<script src="./advanced-business-layer.js"></script>'
+          new = '<script src="./advanced-business-layer.js?v=2"></script>'
+          if new in text:
+              print('Advanced layer loader already cache-busted.')
+          elif old in text:
+              text = text.replace(old, new, 1)
+              p.write_text(text, encoding='utf-8')
+              print('Updated advanced layer loader to cache-busted v2.')
+          else:
               marker = '</body>'
               if marker not in text:
                   raise SystemExit('CRM1 index.html does not contain </body>; refusing unsafe modification')
-              text = text.replace(marker, tag + '\n' + marker, 1)
+              text = text.replace(marker, new + '\n' + marker, 1)
               p.write_text(text, encoding='utf-8')
-              print('Injected advanced layer loader')
-          else:
-              print('Advanced layer loader already present')
+              print('Injected cache-busted advanced layer loader.')
 
       - name: Commit integration if changed
         shell: bash
@@ -46,5 +51,5 @@ jobs:
           git config user.name 'Aaroogyam CRM Bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add crm1/index.html
-          git commit -m 'Integrate CRM1 advanced business layer [skip ci]'
+          git commit -m 'Cache-bust CRM1 advanced module bootstrap [skip ci]'
           git push
