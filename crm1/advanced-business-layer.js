@@ -16,38 +16,8 @@
   function unlock(){document.getElementById(GATE_ID)?.remove();document.getElementById('crm1AdvancedBootLoader')?.remove();try{window.crm1AdvancedReadyResolve?.()}catch(e){}}
   function load(src,timeout){return new Promise(function(resolve){var done=false,s=document.createElement('script'),tm=setTimeout(function(){if(done)return;done=true;console.warn('CRM1 module timeout:',src);resolve(false)},timeout||PER_MODULE_WAIT);function finish(ok){if(done)return;done=true;clearTimeout(tm);resolve(ok)}s.src=src;s.async=false;s.onload=async function(){try{if(/crm1-supabase-runtime-init\.js/i.test(src)&&window.crm1SupabaseReady){await window.crm1SupabaseReady}}catch(e){console.error('CRM1 runtime init failed:',e)}finish(true)};s.onerror=function(){finish(false)};document.head.appendChild(s)})}
   var modules=[
-    './crm1-supabase-runtime-init.js?v=1',
-    './crm1-api-compat.js?v=1',
-    './crm1-ops-settlement-verification-stability.js?v=2',
-    './advanced-business-layer.core.js',
-    './crm1-followup-verification-fix.js?v=3',
-    './crm1-followups-queue-fix.js?v=3',
-    './crm1-followup-customer-context-fix.js?v=3',
-    './crm1-agent-workspace.js',
-    './crm1-call-console.js?v=2',
-    './crm1-call-disposition.js',
-    './crm1-lead-call-bridge.js',
-    './crm1-lead-workqueue.js',
-    './crm1-telephony-bridge-readiness.js',
-    './crm1-workforce-runtime.js?v=2',
-    './crm1-workforce-ui-bridge.js?v=2',
-    './crm1-followup-lead-status-sync.js?v=2',
-    './crm1-order-assignment-verification-guard.js?v=1',
-    './crm1-manager-reports.js?v=2',
-    './crm1-order-timeline.js?v=4',
-    './crm1-delivery-workflow.js?v=2',
-    './crm1-agent-performance-detailed.js?v=2',
-    './crm1-advanced-reports-detailed.js?v=1',
-    './crm1-pin-rules-detailed.js?v=1',
-    './crm1-inventory-detailed.js?v=1',
-    './crm1-qa-detailed-v6.js?v=6',
-    './crm1-production-suite.js?v=1',
-    './crm1-production-suite-retry-v2.js?v=1',
-    './crm1-render-stability.js?v=4',
-    './crm1-navigation-ui-v8.js?v=5',
-    './crm1-ist-ops-fix.js?v=6',
-    './crm1-ist-ops-final-guard.js?v=4',
-    './crm1-verification-followup-stability-final.js?v=5'
+    './crm1-supabase-runtime-init.js?v=1','./crm1-api-compat.js?v=1','./crm1-ops-settlement-verification-stability.js?v=2','./advanced-business-layer.core.js','./crm1-followup-verification-fix.js?v=3','./crm1-followups-queue-fix.js?v=3','./crm1-followup-customer-context-fix.js?v=3','./crm1-agent-workspace.js','./crm1-call-console.js?v=2','./crm1-call-disposition.js','./crm1-lead-call-bridge.js','./crm1-lead-workqueue.js','./crm1-telephony-bridge-readiness.js','./crm1-workforce-runtime.js?v=2','./crm1-workforce-ui-bridge.js?v=2','./crm1-followup-lead-status-sync.js?v=2','./crm1-order-assignment-verification-guard.js?v=1','./crm1-manager-reports.js?v=2','./crm1-order-timeline.js?v=4','./crm1-delivery-workflow.js?v=2','./crm1-agent-performance-detailed.js?v=2','./crm1-advanced-reports-detailed.js?v=1','./crm1-pin-rules-detailed.js?v=1','./crm1-inventory-detailed.js?v=1','./crm1-qa-detailed-v6.js?v=6','./crm1-production-suite.js?v=1','./crm1-production-suite-retry-v2.js?v=1','./crm1-render-stability.js?v=4','./crm1-navigation-ui-v8.js?v=5','./crm1-ist-ops-fix.js?v=6','./crm1-ist-ops-final-guard.js?v=4','./crm1-verification-followup-stability-final.js?v=5',
+    './crm1-role-visibility-final.js?v=1'
   ];
   lock();
   var totalTimer=setTimeout(function(){console.warn('CRM1 advanced startup total timeout');unlock()},MAX_TOTAL_WAIT);
