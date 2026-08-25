@@ -1,5 +1,5 @@
-/* CRM1 universal render-stability guard v4.
-   Advanced pages owned by isolated renderers are not managed by this guard.
+/* CRM1 universal render-stability guard v5.
+   Isolated Advanced Reports owns its own renderer and must not be staged here.
 */
 (function(){
   'use strict';
@@ -7,7 +7,6 @@
     timeline:['timelineContent','crm1OrderTimelineResult'],
     agentPerformance:['agentPerformanceContent','crm1AgentPerfRoot'],
     partnerPerformance:['partnerPerformanceContent','crm1PPFinalRoot'],
-    advancedReports:['advancedReportsContent','crm1ARDetailedRoot'],
     inventory:['inventoryContent','crm1InventoryDetailedRoot'],
     pinRules:['pinRulesContent','crm1PinDetailedRoot'],
     crm1QAV6Page:['crm1QAV6Root'],
@@ -16,7 +15,7 @@
   var LABEL_TO_PAGE={
     'order timeline':'timeline','agent performance':'agentPerformance',
     'delivery partners':'partnerPerformance','delivery partners performance':'partnerPerformance',
-    'advanced reports':'advancedReports','inventory':'inventory','pin auto assignment':'pinRules',
+    'inventory':'inventory','pin auto assignment':'pinRules',
     'qa & dispositions':'crm1QAV6Page','qa dispositions':'crm1QAV6Page'
   };
   function pageRoot(id){return document.getElementById(id)}
@@ -28,7 +27,7 @@
   function scan(){Object.keys(ROOTS).forEach(function(id){var p=pageRoot(id);if(p)stage(p)})}
   function normalizeLabel(v){return String(v||'').replace(/[\s📊📈📦🤝🤖🎧📍🛵]/g,' ').replace(/\s+/g,' ').trim().toLowerCase()}
   function preStageFromButton(btn){if(!btn)return;var label=normalizeLabel(btn.textContent),pageId=null;Object.keys(LABEL_TO_PAGE).some(function(key){if(label.indexOf(key)!==-1){pageId=LABEL_TO_PAGE[key];return true}return false});if(pageId){var page=pageRoot(pageId);if(page)hideLegacy(page)}}
-  function bindNavigationPreStage(){if(document.documentElement.dataset.crm1StabilityNavBound==='4')return;document.documentElement.dataset.crm1StabilityNavBound='4';document.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('#nav button');if(btn)preStageFromButton(btn)},true)}
+  function bindNavigationPreStage(){if(document.documentElement.dataset.crm1StabilityNavBound==='5')return;document.documentElement.dataset.crm1StabilityNavBound='5';document.addEventListener('click',function(e){var btn=e.target.closest&&e.target.closest('#nav button');if(btn)preStageFromButton(btn)},true)}
   function start(){var main=document.querySelector('.main');if(!main)return;bindNavigationPreStage();var observer=new MutationObserver(function(){scan()});observer.observe(main,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});scan();window.crm1RenderStabilityReady=true}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
