@@ -9,8 +9,6 @@ on:
       - 'tests/crm1/agent-dashboard-orders.spec.cjs'
       - '.github/workflows/crm1-agent-dashboard-only.yml'
 
-auth:
-
 jobs:
   agent-dashboard:
     name: Agent Dashboard regression only
