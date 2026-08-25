@@ -14,14 +14,15 @@ async function loginAgent(page) {
 }
 
 async function assertOnlyLoggedInAgentRows(page) {
-  const agentName = await page.locator('#userInfo').innerText();
+  const userInfo = (await page.locator('#userInfo').innerText()).trim();
+  const agentName = userInfo.split(/\s*•\s*/)[0].trim();
   const rows = page.locator('#dashboardOrdersBody tr');
   const count = await rows.count();
   for (let i = 0; i < count; i++) {
     const cells = rows.nth(i).locator('td');
     if (await cells.count() < 8) continue;
     const rowAgent = (await cells.nth(4).innerText()).trim();
-    expect(rowAgent, `Unexpected agent in Your Orders row ${i + 1}`).toBe(agentName.trim());
+    expect(rowAgent, `Unexpected agent in Your Orders row ${i + 1}`).toBe(agentName);
   }
 }
 
@@ -32,6 +33,7 @@ test('Agent dashboard Your Orders stays scoped to logged-in agent on initial loa
   await dashboardBtn.click();
   await expect(page.locator('#dashboardOrdersBody')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#dashFilterType')).toBeVisible();
+  await page.waitForTimeout(800);
   await assertOnlyLoggedInAgentRows(page);
 
   const month = await page.evaluate(() => {
@@ -42,13 +44,14 @@ test('Agent dashboard Your Orders stays scoped to logged-in agent on initial loa
   await page.locator('#dashFilterFrom').fill(month);
   await page.locator('#dashFilterTo').fill(month);
   await page.locator('#dashFilterTo').dispatchEvent('change');
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1500);
   await assertOnlyLoggedInAgentRows(page);
 
   await expect(page.locator('#sOrdersLabel')).toContainText(month);
 
   await dashboardBtn.click();
   await expect(page.locator('#dashboardOrdersBody')).toBeVisible({ timeout: 10000 });
+  await page.waitForTimeout(800);
   await assertOnlyLoggedInAgentRows(page);
 });
 
