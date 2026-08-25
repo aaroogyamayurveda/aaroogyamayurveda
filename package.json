@@ -1,0 +1,1 @@
+{"name":"aaroogyamayurveda-crm1-tests","private":true,"version":"1.0.0","scripts":{"test:crm1":"playwright test --config=playwright.config.cjs","test:crm1:smoke":"playwright test tests/crm1/smoke.spec.cjs --config=playwright.config.cjs"},"devDependencies":{"@playwright/test":"^1.58.0"}}
