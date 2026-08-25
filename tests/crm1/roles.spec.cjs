@@ -15,18 +15,18 @@ async function login(page, key) {
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
 
-  const outcome = await Promise.race([
-    page.locator('#app').waitFor({ state: 'visible', timeout: 15000 }).then(() => 'app'),
-    page.locator('#loginMsg').waitFor({ state: 'visible', timeout: 15000 }).then(async () => {
-      const text = (await page.locator('#loginMsg').innerText()).trim();
-      return text && !/Login हो रहा है/.test(text) ? `message:${text}` : 'waiting';
-    })
-  ]).catch(() => 'timeout');
+  const deadline = Date.now() + 15000;
+  let loginMessage = '';
+  while (Date.now() < deadline) {
+    if (await page.locator('#app').isVisible().catch(() => false)) break;
+    loginMessage = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
+    if (loginMessage && !/Login हो रहा है/.test(loginMessage)) break;
+    await page.waitForTimeout(250);
+  }
 
-  if (outcome !== 'app') {
-    const message = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
-    const url = page.url();
-    throw new Error(`${key} login did not open CRM1 app. Outcome=${outcome}; LoginMessage=${message || '(empty)'}; URL=${url}`);
+  if (!(await page.locator('#app').isVisible().catch(() => false))) {
+    loginMessage = (await page.locator('#loginMsg').innerText().catch(() => loginMessage)).trim();
+    throw new Error(`${key} login did not open CRM1 app. LoginMessage=${loginMessage || '(empty)'}; URL=${page.url()}`);
   }
 
   await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i);
