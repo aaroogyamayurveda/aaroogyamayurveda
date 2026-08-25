@@ -21,9 +21,9 @@ permissions:
   contents: read
 
 jobs:
-  smoke:
+  crm1-live:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -40,10 +40,20 @@ jobs:
             sleep 10
           done
           exit 1
-      - name: Run CRM1 smoke tests
+      - name: Run authenticated role tests
         env:
           CRM1_BASE_URL: https://aaroogyamayurveda.in
-        run: npm run test:crm1:smoke
+          CRM1_SUPER_ADMIN_EMAIL: ${{ secrets.CRM1_SUPER_ADMIN_EMAIL }}
+          CRM1_SUPER_ADMIN_PASSWORD: ${{ secrets.CRM1_SUPER_ADMIN_PASSWORD }}
+          CRM1_MANAGER_EMAIL: ${{ secrets.CRM1_MANAGER_EMAIL }}
+          CRM1_MANAGER_PASSWORD: ${{ secrets.CRM1_MANAGER_PASSWORD }}
+          CRM1_AGENT_EMAIL: ${{ secrets.CRM1_AGENT_EMAIL }}
+          CRM1_AGENT_PASSWORD: ${{ secrets.CRM1_AGENT_PASSWORD }}
+          CRM1_DEALER_EMAIL: ${{ secrets.CRM1_DEALER_EMAIL }}
+          CRM1_DEALER_PASSWORD: ${{ secrets.CRM1_DEALER_PASSWORD }}
+          CRM1_COURIER_EMAIL: ${{ secrets.CRM1_COURIER_EMAIL }}
+          CRM1_COURIER_PASSWORD: ${{ secrets.CRM1_COURIER_PASSWORD }}
+        run: npm run test:crm1
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
