@@ -71,6 +71,15 @@ async function assertPartnerRole(page, key, orderLabel) {
   await expect(page.locator('main')).toContainText(/Advanced Reports/i);
   await expect(page.locator('main')).toContainText(/Total Assigned/i,{timeout:10000});
   await expect(page.locator('main')).toContainText(/Delivered/i);
+
+  // Regression check: the page previously rendered correctly and then reverted
+  // to the generic Loading state after 5-10 seconds. Keep it open past that window.
+  await page.waitForTimeout(15000);
+  await expect(page.locator('main')).toContainText(/Advanced Reports/i);
+  await expect(page.locator('main')).toContainText(/Total Assigned/i);
+  await expect(page.locator('main')).toContainText(/Delivered/i);
+  await expect(page.locator('.crm1-stability-loading')).toHaveCount(0);
+  await expect(page.locator('main')).not.toHaveText(/^\s*Loading…?\s*$/i);
   expect(errors, errors.join('\n')).toEqual([]);
 }
 
