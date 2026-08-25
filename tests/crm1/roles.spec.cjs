@@ -30,6 +30,51 @@ async function login(page, key) {
   }
 
   await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i);
+  await page.waitForTimeout(1800);
+}
+
+async function assertPartnerRole(page, key, orderLabel) {
+  const errors=[];
+  page.on('pageerror', e=>errors.push(e.message));
+  await login(page, key);
+
+  const nav = page.locator('#nav');
+  await expect(nav).toContainText(orderLabel);
+  await expect(nav).toContainText(/Advanced Reports/i);
+  await expect(nav).not.toContainText(/Order Timeline/i);
+  await expect(nav).not.toContainText(/Conversion Workbench/i);
+
+  const orderBtn = nav.locator('button').filter({hasText:new RegExp(orderLabel,'i')}).first();
+  await orderBtn.click();
+  await page.waitForTimeout(1400);
+  await expect(page.locator('main')).toContainText(orderLabel);
+
+  const table = page.locator('main table').filter({has: page.locator('thead')}).first();
+  const headerText = await page.locator('main table thead').first().innerText();
+  expect(headerText).toMatch(/Customer/i);
+  expect(headerText).toMatch(/Mobile/i);
+  expect(headerText).toMatch(/Product/i);
+  expect(headerText).toMatch(/Status/i);
+  expect(headerText).toMatch(/Update/i);
+
+  const rows = await page.locator('main table tbody tr').count();
+  expect(rows).toBeGreaterThanOrEqual(1);
+
+  const settlementBtn = nav.locator('button').filter({hasText:/Settlements/i}).first();
+  if (await settlementBtn.count()) {
+    await settlementBtn.click();
+    await page.waitForTimeout(1200);
+    await expect(page.locator('main')).not.toContainText(/Generate Settlement/i);
+    await expect(page.locator('main')).toContainText(/Your Settlements|No settlements found/i);
+  }
+
+  const reportBtn = nav.locator('button').filter({hasText:/Advanced Reports/i}).first();
+  await reportBtn.click();
+  await page.waitForTimeout(1200);
+  await expect(page.locator('main')).toContainText(/Advanced Reports/i);
+  await expect(page.locator('main')).toContainText(/Total Assigned/i);
+  await expect(page.locator('main')).toContainText(/Delivered/i);
+  expect(errors, errors.join('\n')).toEqual([]);
 }
 
 for (const [key, label] of roles) {
@@ -37,27 +82,14 @@ for (const [key, label] of roles) {
     const errors=[];
     page.on('pageerror', e=>errors.push(e.message));
     await login(page, key);
-    await page.waitForTimeout(1500);
     expect(errors, errors.join('\n')).toEqual([]);
   });
 }
 
-test('Dealer role: role navigation and orders page are reachable', async ({ page }) => {
-  await login(page, 'DEALER');
-  const navText = await page.locator('#nav').innerText();
-  expect(navText).toMatch(/Dealer Orders/i);
-  const dealerBtn = page.locator('#nav button').filter({hasText:/Dealer Orders/i}).first();
-  await dealerBtn.click();
-  await page.waitForTimeout(800);
-  expect(await page.locator('main').innerText()).toMatch(/Dealer Orders/i);
+test('Dealer role: assigned orders show customer, mobile, product, status update, own settlements and reports', async ({ page }) => {
+  await assertPartnerRole(page, 'DEALER', 'Dealer Orders');
 });
 
-test('Courier role: role navigation and orders page are reachable', async ({ page }) => {
-  await login(page, 'COURIER');
-  const navText = await page.locator('#nav').innerText();
-  expect(navText).toMatch(/Courier Orders/i);
-  const btn = page.locator('#nav button').filter({hasText:/Courier Orders/i}).first();
-  await btn.click();
-  await page.waitForTimeout(800);
-  expect(await page.locator('main').innerText()).toMatch(/Courier Orders/i);
+test('Courier role: assigned orders show customer, mobile, product, own settlements and reports', async ({ page }) => {
+  await assertPartnerRole(page, 'COURIER', 'Courier Orders');
 });
