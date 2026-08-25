@@ -9,11 +9,26 @@ async function login(page, key) {
   const password = process.env[`CRM1_${key}_PASSWORD`];
   expect(email, `Missing CRM1_${key}_EMAIL secret`).toBeTruthy();
   expect(password, `Missing CRM1_${key}_PASSWORD secret`).toBeTruthy();
+
   await page.goto('/crm1/', { waitUntil: 'domcontentloaded' });
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
-  await expect(page.locator('#app')).toBeVisible({ timeout: 15000 });
+
+  const outcome = await Promise.race([
+    page.locator('#app').waitFor({ state: 'visible', timeout: 15000 }).then(() => 'app'),
+    page.locator('#loginMsg').waitFor({ state: 'visible', timeout: 15000 }).then(async () => {
+      const text = (await page.locator('#loginMsg').innerText()).trim();
+      return text && !/Login हो रहा है/.test(text) ? `message:${text}` : 'waiting';
+    })
+  ]).catch(() => 'timeout');
+
+  if (outcome !== 'app') {
+    const message = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
+    const url = page.url();
+    throw new Error(`${key} login did not open CRM1 app. Outcome=${outcome}; LoginMessage=${message || '(empty)'}; URL=${url}`);
+  }
+
   await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i);
 }
 
