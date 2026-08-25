@@ -51,3 +51,5 @@ test('Agent dashboard Your Orders stays scoped to logged-in agent on initial loa
   await expect(page.locator('#dashboardOrdersBody')).toBeVisible({ timeout: 10000 });
   await assertOnlyLoggedInAgentRows(page);
 });
+
+// Dedicated regression: this test must pass without relying on reopening Dashboard.
