@@ -3,7 +3,7 @@
   'use strict';
   if(window.__crm1IstOpsV3)return;
   window.__crm1IstOpsV3=true;
-  var loaded=false,fixTimer=0;
+  var loaded=false,fixTimer=0,roleLoaded=false;
   function labelFix(){
     fixTimer=0;
     var p=document.getElementById('partnerPerformance');
@@ -25,14 +25,23 @@
     if(fixTimer)return;
     fixTimer=setTimeout(labelFix,0);
   }
+  function loadRoleWorkflow(){
+    if(roleLoaded)return;
+    roleLoaded=true;
+    var r=document.createElement('script');
+    r.src='./crm1-role-workflow-final.js?v=1';
+    r.async=false;
+    r.onerror=function(){console.error('CRM1 role workflow module failed to load')};
+    document.head.appendChild(r);
+  }
   function load(){
     if(loaded)return;
     loaded=true;
     var s=document.createElement('script');
     s.src='./crm1-ist-ops-fix.js?v=3';
     s.async=false;
-    s.onload=function(){setTimeout(labelFix,50);setTimeout(labelFix,500)};
-    s.onerror=function(){console.error('CRM1 IST operations module failed to load')};
+    s.onload=function(){setTimeout(labelFix,50);setTimeout(labelFix,500);loadRoleWorkflow()};
+    s.onerror=function(){console.error('CRM1 IST operations module failed to load');loadRoleWorkflow()};
     document.head.appendChild(s);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',load,{once:true});else load();
