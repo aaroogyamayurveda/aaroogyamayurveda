@@ -4,18 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'crm1/**'
-      - 'tests/crm1/**'
-      - 'playwright.config.cjs'
-      - 'package.json'
-      - '.github/workflows/crm1-playwright.yml'
   pull_request:
-    paths:
-      - 'crm1/**'
-      - 'tests/crm1/**'
-      - 'playwright.config.cjs'
-      - 'package.json'
 
 permissions:
   contents: read
@@ -35,7 +24,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Wait for deployed CRM1
         run: |
-          for i in {1..18}; do
+          for i in {1..24}; do
             if curl -fsS https://aaroogyamayurveda.in/crm1/ >/dev/null; then exit 0; fi
             sleep 10
           done
