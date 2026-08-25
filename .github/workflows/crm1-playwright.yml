@@ -1,0 +1,57 @@
+name: CRM1 Playwright
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'crm1/**'
+      - 'tests/crm1/**'
+      - 'playwright.config.cjs'
+      - 'package.json'
+      - '.github/workflows/crm1-playwright.yml'
+  pull_request:
+    paths:
+      - 'crm1/**'
+      - 'tests/crm1/**'
+      - 'playwright.config.cjs'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Wait for deployed CRM1
+        run: |
+          for i in {1..18}; do
+            if curl -fsS https://aaroogyamayurveda.in/crm1/ >/dev/null; then exit 0; fi
+            sleep 10
+          done
+          exit 1
+      - name: Run CRM1 smoke tests
+        env:
+          CRM1_BASE_URL: https://aaroogyamayurveda.in
+        run: npm run test:crm1:smoke
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm1-playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
