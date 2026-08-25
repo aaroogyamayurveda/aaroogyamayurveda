@@ -46,10 +46,9 @@ async function assertPartnerRole(page, key, orderLabel) {
 
   const orderBtn = nav.locator('button').filter({hasText:new RegExp(orderLabel,'i')}).first();
   await orderBtn.click();
-  await page.waitForTimeout(1400);
   await expect(page.locator('main')).toContainText(orderLabel);
+  await expect(page.locator('main table thead').first()).toContainText(/Update/i,{timeout:10000});
 
-  const table = page.locator('main table').filter({has: page.locator('thead')}).first();
   const headerText = await page.locator('main table thead').first().innerText();
   expect(headerText).toMatch(/Customer/i);
   expect(headerText).toMatch(/Mobile/i);
@@ -63,16 +62,14 @@ async function assertPartnerRole(page, key, orderLabel) {
   const settlementBtn = nav.locator('button').filter({hasText:/Settlements/i}).first();
   if (await settlementBtn.count()) {
     await settlementBtn.click();
-    await page.waitForTimeout(1200);
+    await expect(page.locator('main')).toContainText(/Your Settlements|No settlements found/i,{timeout:10000});
     await expect(page.locator('main')).not.toContainText(/Generate Settlement/i);
-    await expect(page.locator('main')).toContainText(/Your Settlements|No settlements found/i);
   }
 
   const reportBtn = nav.locator('button').filter({hasText:/Advanced Reports/i}).first();
   await reportBtn.click();
-  await page.waitForTimeout(1200);
   await expect(page.locator('main')).toContainText(/Advanced Reports/i);
-  await expect(page.locator('main')).toContainText(/Total Assigned/i);
+  await expect(page.locator('main')).toContainText(/Total Assigned/i,{timeout:10000});
   await expect(page.locator('main')).toContainText(/Delivered/i);
   expect(errors, errors.join('\n')).toEqual([]);
 }
@@ -90,6 +87,6 @@ test('Dealer role: assigned orders show customer, mobile, product, status update
   await assertPartnerRole(page, 'DEALER', 'Dealer Orders');
 });
 
-test('Courier role: assigned orders show customer, mobile, product, own settlements and reports', async ({ page }) => {
+test('Courier role: assigned orders show customer, mobile, product, status update, own settlements and reports', async ({ page }) => {
   await assertPartnerRole(page, 'COURIER', 'Courier Orders');
 });
