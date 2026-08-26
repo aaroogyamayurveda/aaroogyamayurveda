@@ -1,0 +1,104 @@
+name: CRM1 Theme and Font Playwright
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'crm1/crm1-theme-font-safe.js'
+      - 'crm1/index.html'
+      - 'crm1/advanced-business-layer.js'
+      - '.github/workflows/crm1-theme-font-playwright.yml'
+
+jobs:
+  theme-font-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      BASE_URL: https://aaroogyamayurveda.github.io/aaroogyamayurveda/crm1/
+      SUPER_EMAIL: ${{ secrets.CRM1_SUPER_EMAIL }}
+      SUPER_PASSWORD: ${{ secrets.CRM1_SUPER_PASSWORD }}
+      AGENT_EMAIL: ${{ secrets.CRM1_AGENT_EMAIL }}
+      AGENT_PASSWORD: ${{ secrets.CRM1_AGENT_PASSWORD }}
+      DEALER_EMAIL: ${{ secrets.CRM1_DEALER_EMAIL }}
+      DEALER_PASSWORD: ${{ secrets.CRM1_DEALER_PASSWORD }}
+      COURIER_EMAIL: ${{ secrets.CRM1_COURIER_EMAIL }}
+      COURIER_PASSWORD: ${{ secrets.CRM1_COURIER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm i -D @playwright/test
+          npx playwright install --with-deps chromium
+      - name: Wait for deployed CRM
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsSL "$BASE_URL" | grep -q 'Aaroogyam Ayurveda'; then exit 0; fi
+            sleep 10
+          done
+          exit 1
+      - name: Run dedicated Theme Font responsiveness tests
+        run: |
+          cat > theme-font.spec.js <<'EOF'
+          const { test, expect } = require('@playwright/test');
+          const BASE = process.env.BASE_URL;
+          const roles = [
+            ['Super Admin', process.env.SUPER_EMAIL, process.env.SUPER_PASSWORD],
+            ['Agent', process.env.AGENT_EMAIL, process.env.AGENT_PASSWORD],
+            ['Dealer', process.env.DEALER_EMAIL, process.env.DEALER_PASSWORD],
+            ['Courier', process.env.COURIER_EMAIL, process.env.COURIER_PASSWORD]
+          ].filter(x => x[1] && x[2]);
+
+          async function login(page,email,password){
+            await page.goto(BASE,{waitUntil:'domcontentloaded',timeout:60000});
+            await expect(page.locator('#login')).toBeVisible({timeout:20000});
+            await page.locator('#email').fill(email);
+            await page.locator('#password').fill(password);
+            await page.locator('button[type="submit"]').click();
+            await expect(page.locator('#app')).toBeVisible({timeout:30000});
+          }
+
+          test('public login page remains responsive', async ({page}) => {
+            await page.goto(BASE,{waitUntil:'domcontentloaded',timeout:60000});
+            await expect(page.locator('#login')).toBeVisible({timeout:20000});
+            await page.locator('#email').fill('theme-font-smoke@example.invalid');
+            await expect(page.locator('#email')).toHaveValue('theme-font-smoke@example.invalid');
+            await expect(page.locator('#login')).toBeVisible();
+          });
+
+          for(const [role,email,password] of roles){
+            test(role+' theme/font controls and CRM responsiveness', async ({page}) => {
+              await login(page,email,password);
+              const app=page.locator('#app');
+              await expect(app).toBeVisible();
+              await expect(page.locator('#crm1ThemeFontControls')).toBeVisible({timeout:15000});
+              const theme=page.locator('#crm1ThemeSelect');
+              const font=page.locator('#crm1FontControls');
+              await expect(theme).toBeVisible();
+              await expect(font).toBeVisible();
+
+              for(const value of ['emerald','midnight','ocean']){
+                await theme.selectOption(value);
+                await expect(app).toHaveAttribute('data-crm1-theme',value);
+                await expect(page.locator('#userInfo')).toBeVisible();
+              }
+
+              for(const value of ['small','normal','large']){
+                await font.locator('[data-crm1-font="'+value+'"]').click();
+                await expect(app).toHaveAttribute('data-crm1-font',value);
+                await expect(page.locator('#userInfo')).toBeVisible();
+              }
+
+              const clickable = page.locator('button, a, [role="button"]').filter({hasText:/Dashboard|Logout/i}).first();
+              await expect(clickable).toBeVisible({timeout:10000});
+              await page.evaluate(() => {
+                const el=document.querySelector('#app');
+                if(!el || getComputedStyle(el).pointerEvents==='none') throw new Error('CRM app not interactive');
+              });
+            });
+          }
+          EOF
+          npx playwright test theme-font.spec.js --reporter=list
