@@ -1,0 +1,73 @@
+name: CRM1 Final End-to-End Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crm1-final-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  final-audit:
+    name: CRM1 final end-to-end Playwright audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Wait for live deployment
+        run: |
+          for i in {1..24}; do
+            if curl -fsS --max-time 10 https://aaroogyamayurveda.in/crm1/ >/dev/null; then
+              echo "CRM1 is live"
+              exit 0
+            fi
+            echo "Waiting for deployment ($i/24)..."
+            sleep 10
+          done
+          echo "CRM1 deployment did not become reachable"
+          exit 1
+
+      - name: Run final end-to-end audit
+        env:
+          CI: true
+          CRM1_BASE_URL: https://aaroogyamayurveda.in
+          CRM1_SUPER_ADMIN_EMAIL: ${{ secrets.CRM1_SUPER_ADMIN_EMAIL }}
+          CRM1_SUPER_ADMIN_PASSWORD: ${{ secrets.CRM1_SUPER_ADMIN_PASSWORD }}
+          CRM1_MANAGER_EMAIL: ${{ secrets.CRM1_MANAGER_EMAIL }}
+          CRM1_MANAGER_PASSWORD: ${{ secrets.CRM1_MANAGER_PASSWORD }}
+          CRM1_AGENT_EMAIL: ${{ secrets.CRM1_AGENT_EMAIL }}
+          CRM1_AGENT_PASSWORD: ${{ secrets.CRM1_AGENT_PASSWORD }}
+          CRM1_DEALER_EMAIL: ${{ secrets.CRM1_DEALER_EMAIL }}
+          CRM1_DEALER_PASSWORD: ${{ secrets.CRM1_DEALER_PASSWORD }}
+          CRM1_COURIER_EMAIL: ${{ secrets.CRM1_COURIER_EMAIL }}
+          CRM1_COURIER_PASSWORD: ${{ secrets.CRM1_COURIER_PASSWORD }}
+        run: npx playwright test tests/crm1/final-audit.spec.cjs --config=playwright.config.cjs
+
+      - name: Upload final audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm1-final-end-to-end-audit-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 30
