@@ -10,16 +10,19 @@ jobs:
   keepalive:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Supabase API
+      - name: Ping Supabase database API
         env:
           SUPABASE_URL: https://ielebadardbzmoxantsc.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_0pekrOT6vhYZYQ48wHr7Ag_NPcpobGj
         run: |
           set -e
-          echo "Pinging Supabase API to create lightweight project activity..."
-          status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$SUPABASE_URL/rest/v1/")
-          echo "Supabase REST endpoint returned HTTP $status"
-          # 2xx/3xx/401/403 all mean the hosted API endpoint was reached.
+          echo "Pinging a lightweight public REST resource to create project activity..."
+          status=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+            -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_PUBLISHABLE_KEY" \
+            "$SUPABASE_URL/rest/v1/crm_followups?select=id&limit=1")
+          echo "Supabase REST query returned HTTP $status"
           case "$status" in
-            2*|3*|401|403) exit 0 ;;
+            2*) exit 0 ;;
             *) echo "Unexpected HTTP status: $status"; exit 1 ;;
           esac
