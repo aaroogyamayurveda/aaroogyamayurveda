@@ -27,8 +27,21 @@ async function login(page, key) {
   await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 10000 });
 }
 
+async function expandNavigation(page) {
+  const groups = page.locator('#nav .crm1-nav-group');
+  const count = await groups.count();
+  for (let i = 0; i < count; i++) {
+    const group = groups.nth(i);
+    const body = group.locator('.crm1-nav-group-body');
+    if (!(await body.isVisible().catch(() => false))) {
+      await group.locator('.crm1-nav-group-title').click().catch(() => {});
+    }
+  }
+}
+
 async function clickIfPresent(page, pattern) {
-  const btn = page.locator('#nav button:visible').filter({ hasText: pattern }).first();
+  await expandNavigation(page);
+  const btn = page.locator('#nav .crm1-nav-group-body > button:visible').filter({ hasText: pattern }).first();
   if (await btn.count() && await btn.isVisible().catch(() => false)) {
     await btn.click();
     await expect(page.locator('main')).toBeVisible({ timeout: 10000 });
@@ -49,6 +62,7 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
       errors.length = 0;
       await login(page, key);
       await expect(page.locator('#userInfo')).toContainText(expectedRole);
+      await expandNavigation(page);
       const nav = page.locator('#nav .crm1-nav-group-body > button:visible');
       const count = await nav.count();
       expect(count, `${key} has no navigation pages`).toBeGreaterThan(0);
@@ -58,6 +72,7 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
         if (label) labels.push(label);
       }
       for (const label of [...new Set(labels)]) {
+        await expandNavigation(page);
         const btn = page.locator('#nav .crm1-nav-group-body > button:visible').filter({ hasText: label }).first();
         if (!(await btn.count())) continue;
         await btn.click();
