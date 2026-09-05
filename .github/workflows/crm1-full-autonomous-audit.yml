@@ -35,7 +35,7 @@ jobs:
   browser-audit:
     name: CRM1 all-role browser audit
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     needs: static-audit
     steps:
       - name: Checkout
@@ -48,16 +48,18 @@ jobs:
         run: npm install
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: Wait for live deployment
+      - name: Wait for CURRENT CRM1 deployment
         run: |
-          for i in {1..30}; do
-            if curl -fsS --max-time 10 https://aaroogyamayurveda.in/crm1/ >/dev/null; then
-              echo "CRM1 is live"
+          for i in {1..36}; do
+            body=$(curl -fsSL --max-time 15 "https://aaroogyamayurveda.in/crm1/advanced-business-layer.js?cb=${GITHUB_SHA}-${i}" || true)
+            if echo "$body" | grep -q 'crm1-call-console-duplicate-guard.js'; then
+              echo "Live CRM1 contains the current call-console guard from the pushed source."
               exit 0
             fi
-            echo "Waiting for deployment ($i/30)..."
+            echo "Waiting for current CRM1 deployment ($i/36)..."
             sleep 10
           done
+          echo "Timed out waiting for the current CRM1 deployment marker."
           exit 1
       - name: Run full all-role browser audit
         env:
