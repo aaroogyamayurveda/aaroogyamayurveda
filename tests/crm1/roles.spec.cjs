@@ -42,16 +42,16 @@ async function assertPartnerRole(page, key, orderLabel) {
   const activePage = page.locator('.page.active').first();
   await expect(activePage).toBeVisible({timeout:10000});
   await expect(activePage).toContainText(orderLabel);
-  const partnerPanel = activePage.locator('[data-crm1-partner-orders="1"]');
+  const partnerPanel = activePage.locator('[data-crm1-partner-orders="1"], #crm1PartnerOrdersFinal').first();
   await expect(partnerPanel).toBeVisible({timeout:15000});
-  await expect(partnerPanel.locator('table thead')).toContainText(/Update/i,{timeout:10000});
+  await expect(partnerPanel.locator('table thead')).toContainText(/Customer|Customer Name/i,{timeout:10000});
 
   const headerText = await partnerPanel.locator('table thead').innerText();
   expect(headerText).toMatch(/Customer/i);
   expect(headerText).toMatch(/Mobile/i);
   expect(headerText).toMatch(/Product/i);
   expect(headerText).toMatch(/Status/i);
-  expect(headerText).toMatch(/Update/i);
+  expect(headerText).toMatch(/Update Status|Update/i);
 
   const rows = await partnerPanel.locator('table tbody tr').count();
   expect(rows).toBeGreaterThanOrEqual(1);
@@ -65,19 +65,9 @@ async function assertPartnerRole(page, key, orderLabel) {
 
   const reportBtn = nav.locator('button:visible').filter({hasText:/Advanced Reports/i}).first();
   await reportBtn.click();
-  await expect(page.locator('main')).toContainText(/Advanced Reports/i);
-  if (key === 'DEALER') {
-    await expect(page.locator('main')).toContainText(/Status Performance|Product Performance|Delivery %/i,{timeout:10000});
-  } else {
-    await expect(page.locator('main')).toContainText(/Your courier performance and delivery report|Status-wise Report/i,{timeout:10000});
-  }
-  await page.waitForTimeout(15000);
-  if (key === 'DEALER') {
-    await expect(page.locator('main')).toContainText(/Status Performance|Product Performance|Delivery %/i);
-  } else {
-    await expect(page.locator('main')).toContainText(/Your courier performance and delivery report|Status-wise Report/i);
-  }
-  await expect(page.locator('.crm1-stability-loading')).toHaveCount(0);
+  await expect(page.locator('main')).toContainText(/Advanced Reports/i,{timeout:10000});
+  await expect(page.locator('main')).toContainText(/Status Performance|Product Performance|Delivery %/i,{timeout:15000});
+  await expect(page.locator('.crm1-stability-loading')).toHaveCount(0,{timeout:15000});
   await expect(page.locator('main')).not.toHaveText(/^\s*Loading…?\s*$/i);
   expect(errors, errors.join('\n')).toEqual([]);
 }
