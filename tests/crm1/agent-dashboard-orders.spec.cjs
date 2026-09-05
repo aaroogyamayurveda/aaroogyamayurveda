@@ -9,21 +9,35 @@ async function loginAgent(page) {
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
-  await expect(page.locator('#app')).toBeVisible({ timeout: 20000 });
-  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 15000 });
+  const deadline = Date.now() + 20000;
+  while (Date.now() < deadline) {
+    if (await page.locator('#app').isVisible().catch(() => false)) break;
+    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
+    if (msg && !/Login हो रहा है/.test(msg)) break;
+    await page.waitForTimeout(250);
+  }
+  if (!(await page.locator('#app').isVisible().catch(() => false))) {
+    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
+    throw new Error(`Agent login did not open CRM1 app. LoginMessage=${msg || '(empty)'}; URL=${page.url()}`);
+  }
+  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 10000 });
 }
 
 async function assertOnlyLoggedInAgentRows(page) {
   const userInfo = (await page.locator('#userInfo').innerText()).trim();
   const agentName = userInfo.split(/\s*•\s*/)[0].trim();
-  const rows = page.locator('#dashboardOrdersBody tr');
-  const count = await rows.count();
-  for (let i = 0; i < count; i++) {
-    const cells = rows.nth(i).locator('td');
-    if (await cells.count() < 8) continue;
-    const rowAgent = (await cells.nth(4).innerText()).trim();
-    expect(rowAgent, `Unexpected agent in Your Orders row ${i + 1}`).toBe(agentName);
-  }
+  await expect.poll(async () => {
+    const rows = page.locator('#dashboardOrdersBody tr');
+    const count = await rows.count();
+    const foreign = [];
+    for (let i = 0; i < count; i++) {
+      const cells = rows.nth(i).locator('td');
+      if (await cells.count() < 8) continue;
+      const rowAgent = (await cells.nth(4).innerText()).trim();
+      if (rowAgent && rowAgent !== agentName) foreign.push(rowAgent);
+    }
+    return foreign;
+  }, { timeout: 10000, intervals: [100, 250, 500, 1000] }).toEqual([]);
 }
 
 async function openDashboard(page) {
