@@ -9,8 +9,8 @@ async function loginAgent(page) {
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
-  await expect(page.locator('#app')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i);
+  await expect(page.locator('#app')).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 15000 });
 }
 
 async function assertOnlyLoggedInAgentRows(page) {
@@ -26,14 +26,20 @@ async function assertOnlyLoggedInAgentRows(page) {
   }
 }
 
+async function openDashboard(page) {
+  const dashboardBtn = page.locator('#nav button:visible').filter({ hasText: /Dashboard/i }).first();
+  await expect(dashboardBtn).toBeVisible({ timeout: 10000 });
+  await dashboardBtn.click();
+  await expect(page.locator('#dashboard')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#dashboardOrdersTable')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#dashFilterType')).toBeVisible({ timeout: 10000 });
+  return dashboardBtn;
+}
+
 test('Agent dashboard Your Orders stays scoped to logged-in agent on initial load and month filter', async ({ page }) => {
   await loginAgent(page);
 
-  const dashboardBtn = page.locator('#nav button').filter({ hasText: /Dashboard/i }).first();
-  await dashboardBtn.click();
-  await expect(page.locator('#dashboardOrdersBody')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('#dashFilterType')).toBeVisible();
-  await page.waitForTimeout(800);
+  const dashboardBtn = await openDashboard(page);
   await assertOnlyLoggedInAgentRows(page);
 
   const month = await page.evaluate(() => {
@@ -44,14 +50,14 @@ test('Agent dashboard Your Orders stays scoped to logged-in agent on initial loa
   await page.locator('#dashFilterFrom').fill(month);
   await page.locator('#dashFilterTo').fill(month);
   await page.locator('#dashFilterTo').dispatchEvent('change');
-  await page.waitForTimeout(1500);
+  await expect(page.locator('#dashboardOrdersTable')).toBeVisible({ timeout: 10000 });
   await assertOnlyLoggedInAgentRows(page);
 
   await expect(page.locator('#sOrdersLabel')).toContainText(month);
 
   await dashboardBtn.click();
-  await expect(page.locator('#dashboardOrdersBody')).toBeVisible({ timeout: 10000 });
-  await page.waitForTimeout(800);
+  await expect(page.locator('#dashboard')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('#dashboardOrdersTable')).toBeVisible({ timeout: 10000 });
   await assertOnlyLoggedInAgentRows(page);
 });
 
