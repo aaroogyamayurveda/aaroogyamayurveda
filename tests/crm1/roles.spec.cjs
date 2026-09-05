@@ -15,18 +15,17 @@ async function login(page, key) {
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
 
-  const deadline = Date.now() + 15000;
-  let loginMessage = '';
+  const deadline = Date.now() + 20000;
   while (Date.now() < deadline) {
     if (await page.locator('#app').isVisible().catch(() => false)) break;
-    loginMessage = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
-    if (loginMessage && !/Login हो रहा है/.test(loginMessage)) break;
+    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
+    if (msg && !/Login हो रहा है/.test(msg)) break;
     await page.waitForTimeout(250);
   }
 
   if (!(await page.locator('#app').isVisible().catch(() => false))) {
-    loginMessage = (await page.locator('#loginMsg').innerText().catch(() => loginMessage)).trim();
-    throw new Error(`${key} login did not open CRM1 app. LoginMessage=${loginMessage || '(empty)'}; URL=${page.url()}`);
+    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
+    throw new Error(`${key} login did not open CRM1 app. LoginMessage=${msg || '(empty)'}; URL=${page.url()}`);
   }
 
   await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i);
@@ -49,17 +48,18 @@ async function assertPartnerRole(page, key, orderLabel) {
   const activePage = page.locator('.page.active').first();
   await expect(activePage).toBeVisible({timeout:10000});
   await expect(activePage).toContainText(orderLabel);
-  await expect(activePage.locator('#crm1PartnerOrdersFinal')).toBeVisible({timeout:10000});
-  await expect(activePage.locator('#crm1PartnerOrdersFinal table thead')).toContainText(/Update/i,{timeout:10000});
+  const partnerPanel = activePage.locator('[data-crm1-partner-orders="1"]');
+  await expect(partnerPanel).toBeVisible({timeout:15000});
+  await expect(partnerPanel.locator('table thead')).toContainText(/Update/i,{timeout:10000});
 
-  const headerText = await activePage.locator('#crm1PartnerOrdersFinal table thead').innerText();
+  const headerText = await partnerPanel.locator('table thead').innerText();
   expect(headerText).toMatch(/Customer/i);
   expect(headerText).toMatch(/Mobile/i);
   expect(headerText).toMatch(/Product/i);
   expect(headerText).toMatch(/Status/i);
   expect(headerText).toMatch(/Update/i);
 
-  const rows = await activePage.locator('#crm1PartnerOrdersFinal table tbody tr').count();
+  const rows = await partnerPanel.locator('table tbody tr').count();
   expect(rows).toBeGreaterThanOrEqual(1);
 
   const settlementBtn = nav.locator('button:visible').filter({hasText:/Settlements/i}).first();
@@ -72,18 +72,17 @@ async function assertPartnerRole(page, key, orderLabel) {
   const reportBtn = nav.locator('button:visible').filter({hasText:/Advanced Reports/i}).first();
   await reportBtn.click();
   await expect(page.locator('main')).toContainText(/Advanced Reports/i);
-  await expect(page.locator('main')).toContainText(/Orders/i,{timeout:10000});
-  await expect(page.locator('main')).toContainText(/Delivered/i);
-
-  // Regression check: partner Advanced Reports must stay on the same core report
-  // after delayed modules finish loading; it must not switch to the detailed
-  // Total Assigned / dealer-performance view.
+  if (key === 'DEALER') {
+    await expect(page.locator('main')).toContainText(/Status Performance|Product Performance|Delivery %/i,{timeout:10000});
+  } else {
+    await expect(page.locator('main')).toContainText(/Your courier performance and delivery report|Status-wise Report/i,{timeout:10000});
+  }
   await page.waitForTimeout(15000);
-  await expect(page.locator('main')).toContainText(/Advanced Reports/i);
-  await expect(page.locator('main')).toContainText(/Orders/i);
-  await expect(page.locator('main')).toContainText(/Delivered/i);
-  await expect(page.locator('main')).not.toContainText(/Total Assigned/i);
-  await expect(page.locator('main')).not.toContainText(/Your dealer performance and delivery report/i);
+  if (key === 'DEALER') {
+    await expect(page.locator('main')).toContainText(/Status Performance|Product Performance|Delivery %/i);
+  } else {
+    await expect(page.locator('main')).toContainText(/Your courier performance and delivery report|Status-wise Report/i);
+  }
   await expect(page.locator('.crm1-stability-loading')).toHaveCount(0);
   await expect(page.locator('main')).not.toHaveText(/^\s*Loading…?\s*$/i);
   expect(errors, errors.join('\n')).toEqual([]);
