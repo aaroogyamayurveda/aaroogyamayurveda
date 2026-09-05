@@ -38,13 +38,16 @@ async function expandNavigation(page) {
 
 async function clickIfPresent(page, pattern) {
   await expandNavigation(page);
-  const btn = page.locator('#nav .crm1-nav-group-body > button:visible, #nav > button:visible').filter({ hasText: pattern }).first();
-  if (await btn.count() && await btn.isVisible().catch(() => false)) {
-    await btn.click();
-    await expect(page.locator('main')).toBeVisible({ timeout: 10000 });
-    return true;
-  }
-  return false;
+  const candidates = page.locator('#nav .crm1-nav-group-body > button:visible, #nav > button:visible');
+  const btn = candidates.filter({ hasText: pattern }).first();
+  await expect.poll(async () => await btn.count(), { timeout: 10000, intervals: [250, 500, 1000] }).toBeGreaterThan(0);
+  await btn.click();
+  await expect(page.locator('main')).toBeVisible({ timeout: 10000 });
+  await expect.poll(async () => {
+    const text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+    return text.length;
+  }, { timeout: 10000, intervals: [250, 500, 1000] }).toBeGreaterThan(20);
+  return true;
 }
 
 async function assertNoRuntimeErrors(errors, label) {
@@ -71,11 +74,13 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
       for (const label of [...new Set(labels)]) {
         await expandNavigation(page);
         const btn = page.locator('#nav .crm1-nav-group-body > button:visible, #nav > button:visible').filter({ hasText: label }).first();
-        if (!(await btn.count())) continue;
+        await expect(btn).toBeVisible({ timeout: 10000 });
         await btn.click();
-        await expect(page.locator('main')).toBeVisible({ timeout: 10000 });
+        await expect.poll(async () => {
+          const text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+          return text.length;
+        }, { timeout: 10000, intervals: [250, 500, 1000] }).toBeGreaterThan(20);
         const mainText = (await page.locator('main').innerText()).replace(/\s+/g, ' ').trim();
-        expect(mainText.length, `${key} page "${label}" is blank`).toBeGreaterThan(20);
         expect(mainText).not.toMatch(/^Loading…?$/i);
       }
       assertNoRuntimeErrors(errors, key);
@@ -88,17 +93,14 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await login(page, 'AGENT');
-
     const queueOpened = await clickIfPresent(page, /Today.?s Calling Queue/i);
     expect(queueOpened, 'Agent Today\'s Calling Queue page is missing').toBeTruthy();
     await expect(page.locator('main')).toContainText(/Today.?s Calling Queue|Calling Queue/i);
-
     const callBtn = page.locator('#crmW2QueueBody button, #crmLeadBody .crmLeadCall').filter({ hasText: /Call|Dial/i }).first();
     if (await callBtn.count()) {
       await callBtn.click();
       await expect(page.locator('#crm1DialNumber')).toHaveCount(1, { timeout: 10000 });
     }
-
     const createOpened = await clickIfPresent(page, /Create Order/i);
     expect(createOpened, 'Agent Create Order page is missing').toBeTruthy();
     await expect(page.locator('#createOrderPage')).toBeVisible();
@@ -106,7 +108,6 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     await expect(page.locator('#pageProduct')).toHaveCount(1);
     await expect(page.locator('#pageQty')).toHaveCount(1);
     await expect(page.locator('#pageAmount')).toHaveCount(1);
-
     const callConsole = page.locator('#crm1CallConsole');
     await expect(callConsole).toBeVisible({ timeout: 10000 });
     await expect(callConsole.locator('#crm1StartCall')).toHaveCount(1);
@@ -115,7 +116,6 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     await expect(callConsole.locator('#crm1StartCall')).toBeVisible();
     await expect(callConsole.locator('#crm1EndCall')).toBeVisible();
     await expect(callConsole.locator('#crm1LogCall')).toBeVisible();
-
     await expect(page.locator('#pageMobile')).toHaveAttribute('required', '');
     await expect(page.locator('#pageProduct')).toHaveAttribute('required', '');
     await expect(page.locator('#pageQty')).toHaveAttribute('required', '');
