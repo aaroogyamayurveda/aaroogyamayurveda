@@ -46,17 +46,20 @@ async function assertPartnerRole(page, key, orderLabel) {
 
   const orderBtn = nav.locator('button:visible').filter({hasText:new RegExp(orderLabel,'i')}).first();
   await orderBtn.click();
-  await expect(page.locator('main')).toContainText(orderLabel);
-  await expect(page.locator('main table thead').first()).toContainText(/Update/i,{timeout:10000});
+  const activePage = page.locator('.page.active').first();
+  await expect(activePage).toBeVisible({timeout:10000});
+  await expect(activePage).toContainText(orderLabel);
+  await expect(activePage.locator('#crm1PartnerOrdersFinal')).toBeVisible({timeout:10000});
+  await expect(activePage.locator('#crm1PartnerOrdersFinal table thead')).toContainText(/Update/i,{timeout:10000});
 
-  const headerText = await page.locator('main table thead').first().innerText();
+  const headerText = await activePage.locator('#crm1PartnerOrdersFinal table thead').innerText();
   expect(headerText).toMatch(/Customer/i);
   expect(headerText).toMatch(/Mobile/i);
   expect(headerText).toMatch(/Product/i);
   expect(headerText).toMatch(/Status/i);
   expect(headerText).toMatch(/Update/i);
 
-  const rows = await page.locator('main table tbody tr').count();
+  const rows = await activePage.locator('#crm1PartnerOrdersFinal table tbody tr').count();
   expect(rows).toBeGreaterThanOrEqual(1);
 
   const settlementBtn = nav.locator('button:visible').filter({hasText:/Settlements/i}).first();
