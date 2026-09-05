@@ -1,5 +1,7 @@
 /* CRM1 Agent Call Console - manual personal-phone calling mode; CRM records lifecycle only. */
 (async()=>{'use strict';
+if(window.__crm1CallConsoleInitialized) return;
+window.__crm1CallConsoleInitialized=true;
 const $=id=>document.getElementById(id);let db=window.sb,me=null,agentCfg=null,active=null,timer=null;
 const digits=v=>String(v||'').replace(/\D/g,'').slice(-10);
 function toast(m){const t=$('toast');if(t){t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2600)}else console.log(m)}
@@ -23,47 +25,12 @@ function bar(){
  $('crm1StartCall').onclick=startCall;$('crm1EndCall').onclick=endCall;
  $('crm1LogCall').onclick=null;
 }
-async function event(type,payload={}){
- if(!db||!me)return null;
- const mobile=digits($('crm1DialNumber')?.value||$('pageMobile')?.value);
- const {data,error}=await db.from('crm_call_events').insert({call_id:active?.id||crypto.randomUUID(),user_id:me.id,lead_id:window.crm1CallContext?.lead_id||null,customer_id:window.crm1CallContext?.customer_id||null,mobile:mobile||null,event_type:type,event_at:new Date().toISOString(),payload}).select('id,call_id').single();
- if(error)console.warn('CRM call event:',error.message);return data;
-}
-async function loadAgent(){
- const q=await db.from('crm_telephony_agents').select('*').eq('agent_id',me.id).maybeSingle();
- if(q.error)return;agentCfg=q.data||null;
- $('ccAgentStatus').value=agentCfg?.status==='paused'?'paused':'ready';
-}
-async function setAgentStatus(status){
- if(!agentCfg)return;
- const {error}=await db.from('crm_telephony_agents').update({status,last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',agentCfg.id);
- if(error){toast(error.message);return}agentCfg.status=status;await event('agent_status',{status});$('ccStatus').textContent=status[0].toUpperCase()+status.slice(1);
-}
+async function event(type,payload={}){if(!db||!me)return null;const mobile=digits($('crm1DialNumber')?.value||$('pageMobile')?.value);const {data,error}=await db.from('crm_call_events').insert({call_id:active?.id||crypto.randomUUID(),user_id:me.id,lead_id:window.crm1CallContext?.lead_id||null,customer_id:window.crm1CallContext?.customer_id||null,mobile:mobile||null,event_type:type,event_at:new Date().toISOString(),payload}).select('id,call_id').single();if(error)console.warn('CRM call event:',error.message);return data;}
+async function loadAgent(){const q=await db.from('crm_telephony_agents').select('*').eq('agent_id',me.id).maybeSingle();if(q.error)return;agentCfg=q.data||null;$('ccAgentStatus').value=agentCfg?.status==='paused'?'paused':'ready';}
+async function setAgentStatus(status){if(!agentCfg)return;const {error}=await db.from('crm_telephony_agents').update({status,last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',agentCfg.id);if(error){toast(error.message);return}agentCfg.status=status;await event('agent_status',{status});$('ccStatus').textContent=status[0].toUpperCase()+status.slice(1);}
 function tick(){if(!active)return;const s=Math.floor((Date.now()-active.started)/1000);$('ccTimer').value=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
-async function startCall(){
- const mobile=digits($('crm1DialNumber').value||$('pageMobile')?.value);
- if(!/^[6-9]\d{9}$/.test(mobile)){toast('Enter valid 10 digit mobile');return}
- if(active)return;
- active={id:crypto.randomUUID(),started:Date.now(),mobile,interactionId:null};
- $('crm1DialNumber').value=mobile;$('crm1StartCall').disabled=true;$('crm1EndCall').disabled=false;callVisual(true);$('ccStatus').textContent='Calling — use personal phone';
- const ctx=window.crm1CallContext||{};
- const {data:interaction,error:ie}=await db.from('crm_interactions').insert({lead_id:ctx.lead_id||null,customer_id:ctx.customer_id||null,interaction_type:'call',direction:'outbound',provider:'manual_phone',agent_id:me.id,created_by:me.id,status:'in_progress',started_at:new Date().toISOString(),provider_payload:{call_id:active.id,dial_number:mobile,manual_phone:true}}).select('id').single();
- if(!ie)active.interactionId=interaction.id;
- await event('call_started',{provider:'manual_phone',manual_phone:true});timer=setInterval(tick,1000);tick();
- window.dispatchEvent(new CustomEvent('crm1CallStarted',{detail:{call_id:active.id,mobile,provider:'manual_phone',manual_phone:true}}));
-}
-async function endCall(){
- if(!active)return;clearInterval(timer);timer=null;
- const seconds=Math.floor((Date.now()-active.started)/1000);const finished=active;
- await event('call_ended',{duration_seconds:seconds,provider:'manual_phone',manual_phone:true});
- if(finished.interactionId)await db.from('crm_interactions').update({status:'completed',ended_at:new Date().toISOString(),duration_seconds:seconds,details:'Manual keypad phone call · '+seconds+' sec'}).eq('id',finished.interactionId);
- active=null;$('crm1StartCall').disabled=false;$('crm1EndCall').disabled=true;callVisual(false);$('ccStatus').textContent='Disposition required';
- window.dispatchEvent(new CustomEvent('crm1CallEnded',{detail:{call_id:finished.id,mobile:finished.mobile,duration_seconds:seconds,provider:'manual_phone',manual_phone:true}}));
-}
-async function boot(){
- for(let i=0;i<30&&!db;i++){await new Promise(r=>setTimeout(r,100));db=window.sb}if(!db)return;
- const {data:{user}}=await db.auth.getUser();if(!user)return;me=user;bar();loadAgent();
- document.addEventListener('crm1WorkspaceCall',e=>{const n=digits(e.detail?.number);if(n)$('crm1DialNumber').value=n});
-}
+async function startCall(){const mobile=digits($('crm1DialNumber').value||$('pageMobile')?.value);if(!/^[6-9]\d{9}$/.test(mobile)){toast('Enter valid 10 digit mobile');return}if(active)return;active={id:crypto.randomUUID(),started:Date.now(),mobile,interactionId:null};$('crm1DialNumber').value=mobile;$('crm1StartCall').disabled=true;$('crm1EndCall').disabled=false;callVisual(true);$('ccStatus').textContent='Calling — use personal phone';const ctx=window.crm1CallContext||{};const {data:interaction,error:ie}=await db.from('crm_interactions').insert({lead_id:ctx.lead_id||null,customer_id:ctx.customer_id||null,interaction_type:'call',direction:'outbound',provider:'manual_phone',agent_id:me.id,created_by:me.id,status:'in_progress',started_at:new Date().toISOString(),provider_payload:{call_id:active.id,dial_number:mobile,manual_phone:true}}).select('id').single();if(!ie)active.interactionId=interaction.id;await event('call_started',{provider:'manual_phone',manual_phone:true});timer=setInterval(tick,1000);tick();window.dispatchEvent(new CustomEvent('crm1CallStarted',{detail:{call_id:active.id,mobile,provider:'manual_phone',manual_phone:true}}));}
+async function endCall(){if(!active)return;clearInterval(timer);timer=null;const seconds=Math.floor((Date.now()-active.started)/1000);const finished=active;await event('call_ended',{duration_seconds:seconds,provider:'manual_phone',manual_phone:true});if(finished.interactionId)await db.from('crm_interactions').update({status:'completed',ended_at:new Date().toISOString(),duration_seconds:seconds,details:'Manual keypad phone call · '+seconds+' sec'}).eq('id',finished.interactionId);active=null;$('crm1StartCall').disabled=false;$('crm1EndCall').disabled=true;callVisual(false);$('ccStatus').textContent='Disposition required';window.dispatchEvent(new CustomEvent('crm1CallEnded',{detail:{call_id:finished.id,mobile:finished.mobile,duration_seconds:seconds,provider:'manual_phone',manual_phone:true}}));}
+async function boot(){for(let i=0;i<30&&!db;i++){await new Promise(r=>setTimeout(r,100));db=window.sb}if(!db)return;const {data:{user}}=await db.auth.getUser();if(!user)return;me=user;bar();loadAgent();document.addEventListener('crm1WorkspaceCall',e=>{const n=digits(e.detail?.number);if(n&&$('crm1DialNumber'))$('crm1DialNumber').value=n});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
