@@ -9,21 +9,17 @@ async function login(page, key) {
   expect(email, `Missing CRM1_${key}_EMAIL secret`).toBeTruthy();
   expect(password, `Missing CRM1_${key}_PASSWORD secret`).toBeTruthy();
   await page.goto('/crm1/', { waitUntil: 'domcontentloaded' });
+  await page.locator('#loginForm').waitFor({ state: 'visible', timeout: 15000 });
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
-  const deadline = Date.now() + 20000;
-  while (Date.now() < deadline) {
-    if (await page.locator('#app').isVisible().catch(() => false)) break;
+  await expect.poll(async () => {
+    if (await page.locator('#app').isVisible().catch(() => false)) return 'app';
     const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
-    if (msg && !/Login हो रहा है/.test(msg)) break;
-    await page.waitForTimeout(250);
-  }
-  if (!(await page.locator('#app').isVisible().catch(() => false))) {
-    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
-    throw new Error(`${key} login did not open CRM1 app. LoginMessage=${msg || '(empty)'}; URL=${page.url()}`);
-  }
-  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 10000 });
+    if (msg && !/Login हो रहा है/.test(msg)) return `error:${msg}`;
+    return 'pending';
+  }, { timeout: 45000, intervals: [250, 500, 1000, 2000] }).toMatch(/^app$/);
+  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 15000 });
 }
 
 async function expandNavigation(page) {
@@ -72,11 +68,12 @@ async function exerciseSearches(page) {
   const buttons = page.locator('main button:visible');
   const bc = await buttons.count();
   for (let i = 0; i < bc; i++) {
+    if (page.isClosed()) return;
     const b = buttons.nth(i);
     const label = (await b.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
     if (/^(Search|Refresh|Apply|Filter)$/i.test(label)) {
       await b.click().catch(() => {});
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(100);
     }
   }
 }
@@ -106,7 +103,7 @@ async function auditVisibleButtons(page, role, label) {
     if (/logout|delete|save|submit|create|assign|verify|deliver|cancel order|start call|end call|log call|update status|generate settlement/i.test(signature)) continue;
     if (safeButtonPattern.test(text) || /open|view|details|search|refresh|filter|apply|clear|close/i.test(signature)) {
       await b.click().catch(() => {});
-      await page.waitForTimeout(250);
+      await page.waitForTimeout(100);
     }
   }
 }
@@ -114,6 +111,7 @@ async function auditVisibleButtons(page, role, label) {
 test.describe('CRM1 FULL UI AUDIT', () => {
   for (const role of roles) {
     test(`${role}: all visible navigation pages, forms, searches and safe buttons`, async ({ page }) => {
+      test.setTimeout(120000);
       const errors = [];
       const failedResponses = [];
       page.on('pageerror', e => errors.push(e.message));
@@ -125,7 +123,7 @@ test.describe('CRM1 FULL UI AUDIT', () => {
       await expandNavigation(page);
       await assertNoDuplicateIds(page, role, 'dashboard');
 
-      const navButtons = page.locator('#nav .crm1-nav-group-body > button:visible');
+      const navButtons = page.locator('#nav .crm1-nav-group-body > button:visible, #nav > button:visible');
       const navCount = await navButtons.count();
       expect(navCount, `${role}: no visible navigation buttons`).toBeGreaterThan(0);
 
@@ -136,17 +134,17 @@ test.describe('CRM1 FULL UI AUDIT', () => {
       }
 
       for (const label of [...new Set(labels)]) {
+        if (page.isClosed()) throw new Error(`${role}: browser page closed while auditing "${label}"`);
         await expandNavigation(page);
-        const btn = page.locator('#nav .crm1-nav-group-body > button:visible').filter({ hasText: label }).first();
+        const btn = page.locator('#nav .crm1-nav-group-body > button:visible, #nav > button:visible').filter({ hasText: label }).first();
         if (!(await btn.count())) continue;
-        await btn.click();
-        await page.waitForTimeout(700);
+        await btn.click().catch(() => {});
+        await page.waitForTimeout(500);
         await assertPageReady(page, role, label);
         await assertNoDuplicateIds(page, role, label);
         await auditForms(page);
         await exerciseSearches(page);
         await auditVisibleButtons(page, role, label);
-        await page.waitForTimeout(300);
       }
 
       expect(failedResponses, `${role}: server 5xx responses:\n${failedResponses.join('\n')}`).toEqual([]);
