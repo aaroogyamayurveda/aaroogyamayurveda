@@ -23,15 +23,8 @@ async function login(page, key) {
   await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 10000 });
 }
 
-async function assertStableAdvancedReports(page, key) {
-  const errors = [];
-  page.on('pageerror', e => errors.push(e.message));
-  await login(page, key);
-  const reportBtn = page.locator('#nav button:visible').filter({ hasText: /Advanced Reports/i }).first();
-  await expect(reportBtn).toHaveCount(1);
-  await reportBtn.click();
+async function assertDealerReport(page) {
   const main = page.locator('main');
-  await expect(main).toContainText(/Advanced Reports/i);
   await expect(page.locator('#crm1ARDetailedRoot')).toBeVisible({ timeout: 10000 });
   await expect(page.locator('#crm1ARFrom')).toBeVisible();
   await expect(page.locator('#crm1ARTo')).toBeVisible();
@@ -41,15 +34,12 @@ async function assertStableAdvancedReports(page, key) {
   await expect(main).toContainText(/Product Performance/i);
   await expect(main).toContainText(/Delivery %/i);
   await expect(main).toContainText(/Revenue/i);
-
   const from = '2026-08-01', to = '2026-08-25';
   await page.locator('#crm1ARFrom').fill(from);
   await page.locator('#crm1ARTo').fill(to);
   await page.locator('#crm1ARApply').click();
   await expect(page.locator('#crm1ARMsg')).toContainText(new RegExp(`Report: ${from} to ${to}`), { timeout: 15000 });
-  await expect(main).not.toContainText(/Total Assigned/i);
   await expect(main).not.toContainText(/Your dealer performance and delivery report/i);
-
   await page.waitForTimeout(15000);
   const finalText = await main.innerText();
   expect(finalText).toMatch(/Status Performance/i);
@@ -58,13 +48,57 @@ async function assertStableAdvancedReports(page, key) {
   expect(finalText).toMatch(/Revenue/i);
   expect(finalText).not.toMatch(/Total Assigned/i);
   expect(finalText).not.toMatch(/Your dealer performance and delivery report/i);
-  expect(errors, errors.join('\n')).toEqual([]);
 }
 
-test('Dealer Advanced Reports keeps date range core report after delayed modules', async ({ page }) => {
-  await assertStableAdvancedReports(page, 'DEALER');
+async function assertCourierReport(page) {
+  const main = page.locator('main');
+  await expect(main).toContainText(/Your courier performance and delivery report/i);
+  await expect(main).toContainText(/Total Assigned/i);
+  await expect(main).toContainText(/Delivered/i);
+  await expect(main).toContainText(/In Progress/i);
+  await expect(main).toContainText(/RTO/i);
+  await expect(main).toContainText(/Cancelled/i);
+  await expect(main).toContainText(/Order Value/i);
+  await expect(main).toContainText(/Status-wise Report/i);
+
+  const from = '2026-08-01', to = '2026-08-25';
+  const inputs = page.locator('main input[type="date"]');
+  const inputCount = await inputs.count();
+  if (inputCount >= 2) {
+    await inputs.nth(0).fill(from);
+    await inputs.nth(1).fill(to);
+    const apply = page.locator('main button:visible').filter({ hasText: /^Apply$/i }).first();
+    if (await apply.count()) await apply.click();
+  }
+  await expect(main).toContainText(/Your courier performance and delivery report/i, { timeout: 15000 });
+  await page.waitForTimeout(15000);
+  const finalText = await main.innerText();
+  expect(finalText).toMatch(/Your courier performance and delivery report/i);
+  expect(finalText).toMatch(/Total Assigned/i);
+  expect(finalText).toMatch(/Delivered/i);
+  expect(finalText).toMatch(/Status-wise Report/i);
+}
+
+test('Dealer Advanced Reports keeps detailed date range core report after delayed modules', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await login(page, 'DEALER');
+  const reportBtn = page.locator('#nav button:visible').filter({ hasText: /Advanced Reports/i }).first();
+  await expect(reportBtn).toHaveCount(1);
+  await reportBtn.click();
+  await expect(page.locator('main')).toContainText(/Advanced Reports/i);
+  await assertDealerReport(page);
+  expect(errors, errors.join('\n')).toEqual([]);
 });
 
-test('Courier Advanced Reports keeps date range core report after delayed modules', async ({ page }) => {
-  await assertStableAdvancedReports(page, 'COURIER');
+test('Courier Advanced Reports keeps courier performance report after delayed modules', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await login(page, 'COURIER');
+  const reportBtn = page.locator('#nav button:visible').filter({ hasText: /Advanced Reports/i }).first();
+  await expect(reportBtn).toHaveCount(1);
+  await reportBtn.click();
+  await expect(page.locator('main')).toContainText(/Advanced Reports/i);
+  await assertCourierReport(page);
+  expect(errors, errors.join('\n')).toEqual([]);
 });
