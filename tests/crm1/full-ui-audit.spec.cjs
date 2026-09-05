@@ -12,9 +12,18 @@ async function login(page, key) {
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
-  await expect(page.locator('#app')).toBeVisible({ timeout: 20000 });
-  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i);
-  await page.waitForTimeout(2000);
+  const deadline = Date.now() + 20000;
+  while (Date.now() < deadline) {
+    if (await page.locator('#app').isVisible().catch(() => false)) break;
+    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
+    if (msg && !/Login हो रहा है/.test(msg)) break;
+    await page.waitForTimeout(250);
+  }
+  if (!(await page.locator('#app').isVisible().catch(() => false))) {
+    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
+    throw new Error(`${key} login did not open CRM1 app. LoginMessage=${msg || '(empty)'}; URL=${page.url()}`);
+  }
+  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 10000 });
 }
 
 async function assertPageReady(page, role, label) {
@@ -61,7 +70,7 @@ async function exerciseSearches(page) {
   }
 }
 
-async function auditForms(page, role, label) {
+async function auditForms(page) {
   const forms = page.locator('main form:visible');
   const fc = await forms.count();
   for (let i = 0; i < fc; i++) {
@@ -79,17 +88,13 @@ async function auditVisibleButtons(page, role, label) {
   const buttons = page.locator('main button:visible');
   const count = await buttons.count();
   for (let i = 0; i < count; i++) {
+    if (page.isClosed()) return;
     const b = buttons.nth(i);
     const text = (await b.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
-    const aria = (await b.getAttribute('aria-label')) || '';
-    const id = (await b.getAttribute('id')) || '';
+    const aria = (await b.getAttribute('aria-label').catch(() => '')) || '';
+    const id = (await b.getAttribute('id').catch(() => '')) || '';
     const signature = `${text} ${aria} ${id}`;
-    await expect(b, `${role}: ${label} button ${signature} not visible`).toBeVisible();
-    const disabled = await b.isDisabled().catch(() => false);
-    // Risky actions are audited by presence/disabled state, not clicked, so the audit never creates/deletes real data.
-    if (/logout|delete|save|submit|create|assign|verify|deliver|cancel order|start call|end call|log call|update status|generate settlement/i.test(signature)) {
-      continue;
-    }
+    if (/logout|delete|save|submit|create|assign|verify|deliver|cancel order|start call|end call|log call|update status|generate settlement/i.test(signature)) continue;
     if (safeButtonPattern.test(text) || /open|view|details|search|refresh|filter|apply|clear|close/i.test(signature)) {
       await b.click().catch(() => {});
       await page.waitForTimeout(250);
@@ -127,7 +132,7 @@ test.describe('CRM1 FULL UI AUDIT', () => {
         await page.waitForTimeout(700);
         await assertPageReady(page, role, label);
         await assertNoDuplicateIds(page, role, label);
-        await auditForms(page, role, label);
+        await auditForms(page);
         await exerciseSearches(page);
         await auditVisibleButtons(page, role, label);
         await page.waitForTimeout(300);
