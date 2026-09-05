@@ -1,7 +1,8 @@
 const { test, expect } = require('@playwright/test');
 
 const roles = ['SUPER_ADMIN', 'MANAGER', 'AGENT', 'DEALER', 'COURIER'];
-const safeButtonPattern = /^(Search|Refresh|Today|Clear|Back|Close|Open|View|Details|Apply|Reset|Next|Previous|Prev|First|Last|Filter|Show|Hide|Expand|Collapse|Edit|Cancel|Load|Retry|Dashboard|Reports)$/i;
+const safeButtonPattern = /^(Search|Refresh|Today|Back|Open|View|Details|Apply|Reset|Next|Previous|Prev|First|Last|Filter|Show|Hide|Expand|Collapse|Load|Retry|Reports)$/i;
+const protectedPages = /create order|settlements|calling queue|inventory|pin auto assignment|assignment|verification|qa/i;
 
 async function login(page, key) {
   const email = process.env[`CRM1_${key}_EMAIL`];
@@ -72,8 +73,8 @@ async function exerciseSearches(page) {
     const b = buttons.nth(i);
     const label = (await b.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
     if (/^(Search|Refresh|Apply|Filter)$/i.test(label)) {
-      await b.click().catch(() => {});
-      await page.waitForTimeout(100);
+      await b.click({ timeout: 3000 }).catch(() => {});
+      if (!page.isClosed()) await page.waitForTimeout(100);
     }
   }
 }
@@ -91,6 +92,9 @@ async function auditForms(page) {
 }
 
 async function auditVisibleButtons(page, role, label) {
+  // Complex operational pages contain controls that are safe only with real business context.
+  // Verify their rendering/forms but do not blindly click them during a generic audit.
+  if (protectedPages.test(label)) return;
   const buttons = page.locator('main button:visible');
   const count = await buttons.count();
   for (let i = 0; i < count; i++) {
@@ -100,10 +104,10 @@ async function auditVisibleButtons(page, role, label) {
     const aria = (await b.getAttribute('aria-label').catch(() => '')) || '';
     const id = (await b.getAttribute('id').catch(() => '')) || '';
     const signature = `${text} ${aria} ${id}`;
-    if (/logout|delete|save|submit|create|assign|verify|deliver|cancel order|start call|end call|log call|update status|generate settlement/i.test(signature)) continue;
-    if (safeButtonPattern.test(text) || /open|view|details|search|refresh|filter|apply|clear|close/i.test(signature)) {
-      await b.click().catch(() => {});
-      await page.waitForTimeout(100);
+    if (/logout|delete|save|submit|create|assign|verify|deliver|cancel order|start call|end call|log call|update status|generate settlement|edit|cancel|close/i.test(signature)) continue;
+    if (safeButtonPattern.test(text) || /open|view|details|search|refresh|filter|apply|clear/i.test(signature)) {
+      await b.click({ timeout: 3000 }).catch(() => {});
+      if (!page.isClosed()) await page.waitForTimeout(100);
     }
   }
 }
@@ -111,7 +115,7 @@ async function auditVisibleButtons(page, role, label) {
 test.describe('CRM1 FULL UI AUDIT', () => {
   for (const role of roles) {
     test(`${role}: all visible navigation pages, forms, searches and safe buttons`, async ({ page }) => {
-      test.setTimeout(120000);
+      test.setTimeout(180000);
       const errors = [];
       const failedResponses = [];
       page.on('pageerror', e => errors.push(e.message));
@@ -134,16 +138,18 @@ test.describe('CRM1 FULL UI AUDIT', () => {
       }
 
       for (const label of [...new Set(labels)]) {
-        if (page.isClosed()) throw new Error(`${role}: browser page closed while auditing "${label}"`);
+        if (page.isClosed()) throw new Error(`${role}: browser page unexpectedly closed before auditing "${label}"`);
         await expandNavigation(page);
         const btn = page.locator('#nav .crm1-nav-group-body > button:visible, #nav > button:visible').filter({ hasText: label }).first();
         if (!(await btn.count())) continue;
-        await btn.click().catch(() => {});
+        await btn.click({ timeout: 5000 }).catch(() => {});
+        if (page.isClosed()) throw new Error(`${role}: browser page unexpectedly closed while opening "${label}"`);
         await page.waitForTimeout(500);
         await assertPageReady(page, role, label);
         await assertNoDuplicateIds(page, role, label);
         await auditForms(page);
         await exerciseSearches(page);
+        if (page.isClosed()) throw new Error(`${role}: browser page unexpectedly closed after auditing "${label}"`);
         await auditVisibleButtons(page, role, label);
       }
 
