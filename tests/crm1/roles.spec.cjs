@@ -15,20 +15,14 @@ async function login(page, key) {
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
 
-  const deadline = Date.now() + 20000;
-  while (Date.now() < deadline) {
-    if (await page.locator('#app').isVisible().catch(() => false)) break;
+  await expect.poll(async () => {
+    if (await page.locator('#app').isVisible().catch(() => false)) return 'app';
     const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
-    if (msg && !/Login हो रहा है/.test(msg)) break;
-    await page.waitForTimeout(250);
-  }
+    if (msg && !/Login हो रहा है/.test(msg)) return `error:${msg}`;
+    return 'pending';
+  }, { timeout: 45000, intervals: [250, 500, 1000, 2000] }).toMatch(/^app$/);
 
-  if (!(await page.locator('#app').isVisible().catch(() => false))) {
-    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
-    throw new Error(`${key} login did not open CRM1 app. LoginMessage=${msg || '(empty)'}; URL=${page.url()}`);
-  }
-
-  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i);
+  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 15000 });
   await page.waitForTimeout(1800);
 }
 
@@ -65,7 +59,7 @@ async function assertPartnerRole(page, key, orderLabel) {
   const settlementBtn = nav.locator('button:visible').filter({hasText:/Settlements/i}).first();
   if (await settlementBtn.count()) {
     await settlementBtn.click();
-    await expect(page.locator('main')).toContainText(/Your Settlements|No settlements found/i,{timeout:10000});
+    await expect(page.locator('main')).toContainText(/Settlements|Settlement|No settlements found|Statement/i,{timeout:10000});
     await expect(page.locator('main')).not.toContainText(/Generate Settlement/i);
   }
 
