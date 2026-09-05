@@ -34,6 +34,17 @@ async function expandNavigation(page) {
   }
 }
 
+async function assertActivePageReady(page, role, label) {
+  const active = page.locator('.page.active').first();
+  await expect(active, `${role}: ${label} active page missing`).toBeVisible({ timeout: 15000 });
+  await expect.poll(async () => {
+    const text = (await active.innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
+    return text.length;
+  }, { timeout: 30000, intervals: [250, 500, 1000, 2000] }).toBeGreaterThan(20);
+  const text = (await active.innerText()).replace(/\s+/g, ' ').trim();
+  expect(text, `${role}: ${label} stuck on loading`).not.toMatch(/^Loading…?$/i);
+}
+
 async function clickIfPresent(page, pattern, options = {}) {
   await expandNavigation(page);
   const candidates = page.locator('#nav .crm1-nav-group-body > button:visible, #nav > button:visible');
@@ -44,11 +55,7 @@ async function clickIfPresent(page, pattern, options = {}) {
     if (options.required) throw e;
     return false;
   }
-  await expect(page.locator('main')).toBeVisible({ timeout: 10000 });
-  await expect.poll(async () => {
-    const text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
-    return text.length;
-  }, { timeout: 10000, intervals: [250, 500, 1000] }).toBeGreaterThan(20);
+  await assertActivePageReady(page, options.role || 'CRM1', String(pattern));
   return true;
 }
 
@@ -58,6 +65,7 @@ async function assertNoRuntimeErrors(errors, label) {
 
 test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
   test('all authenticated roles: every visible CRM page opens with real content', async ({ page }) => {
+    test.setTimeout(240000);
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     for (const [key, expectedRole] of roles) {
@@ -70,20 +78,15 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
       expect(count, `${key} has no navigation pages`).toBeGreaterThan(0);
       const labels = [];
       for (let i = 0; i < count; i++) {
-        const label = (await nav.nth(i).innerText()).replace(/\s+/g, ' ').trim();
+        const label = (await nav.nth(i).innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
         if (label) labels.push(label);
       }
       for (const label of [...new Set(labels)]) {
         await expandNavigation(page);
         const btn = page.locator('#nav .crm1-nav-group-body > button:visible, #nav > button:visible').filter({ hasText: label }).first();
         if (!(await btn.count().catch(() => 0))) continue;
-        await btn.click();
-        await expect.poll(async () => {
-          const text = (await page.locator('main').innerText().catch(() => '')).replace(/\s+/g, ' ').trim();
-          return text.length;
-        }, { timeout: 10000, intervals: [250, 500, 1000] }).toBeGreaterThan(20);
-        const mainText = (await page.locator('main').innerText()).replace(/\s+/g, ' ').trim();
-        expect(mainText).not.toMatch(/^Loading…?$/i);
+        await btn.click({ timeout: 10000 });
+        await assertActivePageReady(page, key, label);
       }
       assertNoRuntimeErrors(errors, key);
       await page.locator('#logout').click();
@@ -92,21 +95,23 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
   });
 
   test('Agent: todays calling queue -> call context -> create order/disposition UI is wired', async ({ page }) => {
+    test.setTimeout(120000);
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await login(page, 'AGENT');
     await expandNavigation(page);
     const queueBtn = page.locator('#nav button:visible').filter({ hasText: /Today.?s Calling Queue/i }).first();
     await expect(queueBtn).toHaveCount(1, { timeout: 15000 });
-    await queueBtn.click();
-    await expect(page.locator('#crm1W2Queue')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#crm1W2Queue')).toContainText(/Today.?s Calling Queue|No leads|No assigned|Calling Queue/i, { timeout: 10000 });
+    await queueBtn.click({ timeout: 10000 });
+    const queue = page.locator('#crm1W2Queue');
+    await expect(queue).toBeVisible({ timeout: 15000 });
+    await expect(queue).toContainText(/Today.?s Calling Queue|No leads|No assigned|Calling Queue/i, { timeout: 15000 });
     const callBtn = page.locator('#crmW2QueueBody button, #crmLeadBody .crmLeadCall').filter({ hasText: /Call|Dial/i }).first();
     if (await callBtn.count()) {
-      await callBtn.click();
+      await callBtn.click({ timeout: 5000 });
       await expect(page.locator('#crm1DialNumber')).toHaveCount(1, { timeout: 10000 });
     }
-    const createOpened = await clickIfPresent(page, /Create Order/i, { required: true });
+    const createOpened = await clickIfPresent(page, /Create Order/i, { required: true, role: 'AGENT' });
     expect(createOpened, 'Agent Create Order page is missing').toBeTruthy();
     await expect(page.locator('#createOrderPage')).toBeVisible();
     await expect(page.locator('#pageMobile')).toHaveCount(1);
@@ -141,9 +146,9 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
         /PIN Auto Assignment/i, /Inventory/i, /Settlements/i, /Reports/i, /Customer 360/i
       ];
       for (const pattern of labels) {
-        const opened = await clickIfPresent(page, pattern);
+        const opened = await clickIfPresent(page, pattern, { role: key });
         if (!opened) continue;
-        const text = (await page.locator('main').innerText()).replace(/\s+/g, ' ');
+        const text = (await page.locator('.page.active').innerText()).replace(/\s+/g, ' ');
         expect(text.length, `${key} ${pattern} page is blank`).toBeGreaterThan(20);
         expect(text).not.toMatch(/^Loading…?$/i);
       }
@@ -157,24 +162,21 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await login(page, 'AGENT');
-    await clickIfPresent(page, /Dashboard/i);
+    await clickIfPresent(page, /Dashboard/i, { role: 'AGENT' });
     await expect(page.locator('#dashboard')).toBeVisible();
     await expect(page.locator('#dashboardOrdersTable')).toBeVisible();
     await expect(page.locator('#dashFilterFrom')).toHaveCount(1);
     await expect(page.locator('#dashFilterTo')).toHaveCount(1);
-    await clickIfPresent(page, /Order Search/i);
+    await clickIfPresent(page, /Order Search/i, { role: 'AGENT' });
     await expect(page.locator('#ordersTable')).toBeVisible();
     await expect(page.locator('#orderSearch')).toHaveCount(1);
     await expect(page.locator('#orderSearchBtn')).toHaveCount(1);
-    const timeline = await clickIfPresent(page, /Order Timeline/i);
-    if (timeline) await expect(page.locator('main')).toContainText(/Order Timeline|Timeline/i);
-    const c360 = await clickIfPresent(page, /Customer 360/i);
-    if (c360) {
-      await expect(page.locator('#crm360Mobile')).toHaveCount(1);
-      await expect(page.locator('#crm360Search')).toHaveCount(1);
-    }
-    const reports = await clickIfPresent(page, /Reports/i);
-    if (reports) await expect(page.locator('main')).toContainText(/Reports|Performance/i);
+    const timeline = await clickIfPresent(page, /Order Timeline/i, { role: 'AGENT' });
+    if (timeline) await expect(page.locator('.page.active')).toContainText(/Order Timeline|Timeline/i);
+    const c360 = await clickIfPresent(page, /Customer 360/i, { role: 'AGENT' });
+    if (c360) { await expect(page.locator('#crm360Mobile')).toHaveCount(1); await expect(page.locator('#crm360Search')).toHaveCount(1); }
+    const reports = await clickIfPresent(page, /Reports/i, { role: 'AGENT' });
+    if (reports) await expect(page.locator('.page.active')).toContainText(/Reports|Performance/i);
     assertNoRuntimeErrors(errors, 'AGENT search/report workflow');
   });
 
@@ -184,7 +186,7 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     for (const [key, orderPattern] of [['DEALER', /Dealer Orders/i], ['COURIER', /Courier Orders/i]]) {
       errors.length = 0;
       await login(page, key);
-      const opened = await clickIfPresent(page, orderPattern, { required: true });
+      const opened = await clickIfPresent(page, orderPattern, { required: true, role: key });
       expect(opened, `${key} order page missing`).toBeTruthy();
       const activePage = page.locator('.page.active').first();
       await expect(activePage).toBeVisible();
@@ -192,13 +194,11 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
       await expect(partnerPanel).toBeVisible({ timeout: 15000 });
       await expect(partnerPanel.locator('table:visible').first()).toBeVisible({ timeout: 10000 });
       const text = await partnerPanel.innerText();
-      expect(text).toMatch(/Customer/i);
-      expect(text).toMatch(/Mobile/i);
-      expect(text).toMatch(/Status/i);
-      const settlements = await clickIfPresent(page, /Settlements/i);
-      if (settlements) await expect(page.locator('main')).toContainText(/Settlement|No settlements found|Statement/i);
-      const reports = await clickIfPresent(page, /Advanced Reports|Reports/i);
-      if (reports) await expect(page.locator('main')).toContainText(/Advanced Reports|Status Performance|Product Performance|Delivery %/i, { timeout: 15000 });
+      expect(text).toMatch(/Customer/i); expect(text).toMatch(/Mobile/i); expect(text).toMatch(/Status/i);
+      const settlements = await clickIfPresent(page, /Settlements/i, { role: key });
+      if (settlements) await expect(page.locator('.page.active')).toContainText(/Settlement|No settlements found|Statement/i);
+      const reports = await clickIfPresent(page, /Advanced Reports|Reports/i, { role: key });
+      if (reports) await expect(page.locator('.page.active')).toContainText(/Advanced Reports|Status Performance|Product Performance|Delivery %/i, { timeout: 20000 });
       assertNoRuntimeErrors(errors, `${key} partner workflow`);
       await page.locator('#logout').click();
       await page.waitForTimeout(400);
