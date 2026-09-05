@@ -9,18 +9,13 @@ async function login(page, key) {
   await page.locator('#email').fill(email);
   await page.locator('#password').fill(password);
   await page.locator('#loginForm button[type="submit"]').click();
-  const deadline = Date.now() + 20000;
-  while (Date.now() < deadline) {
-    if (await page.locator('#app').isVisible().catch(() => false)) break;
+  await expect.poll(async () => {
+    if (await page.locator('#app').isVisible().catch(() => false)) return 'app';
     const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
-    if (msg && !/Login हो रहा है/.test(msg)) break;
-    await page.waitForTimeout(250);
-  }
-  if (!(await page.locator('#app').isVisible().catch(() => false))) {
-    const msg = (await page.locator('#loginMsg').innerText().catch(() => '')).trim();
-    throw new Error(`${key} login did not open CRM1 app. LoginMessage=${msg || '(empty)'}; URL=${page.url()}`);
-  }
-  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 10000 });
+    if (msg && !/Login हो रहा है/.test(msg)) return `error:${msg}`;
+    return 'pending';
+  }, { timeout: 45000, intervals: [250, 500, 1000, 2000] }).toMatch(/^app$/);
+  await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 15000 });
 }
 
 async function assertDealerReport(page) {
@@ -62,14 +57,14 @@ async function assertCourierReport(page) {
   await expect(main).toContainText(/Status-wise Report/i);
 
   const from = '2026-08-01', to = '2026-08-25';
-  const inputs = page.locator('main input[type="date"]');
+  const inputs = page.locator('main input[type="date"]:visible');
   const inputCount = await inputs.count();
-  if (inputCount >= 2) {
-    await inputs.nth(0).fill(from);
-    await inputs.nth(1).fill(to);
-    const apply = page.locator('main button:visible').filter({ hasText: /^Apply$/i }).first();
-    if (await apply.count()) await apply.click();
-  }
+  expect(inputCount, 'Courier Advanced Reports visible date range controls are missing').toBeGreaterThanOrEqual(2);
+  await inputs.nth(0).fill(from);
+  await inputs.nth(1).fill(to);
+  const apply = page.locator('main button:visible').filter({ hasText: /^Apply$/i }).first();
+  await expect(apply).toHaveCount(1);
+  await apply.click();
   await expect(main).toContainText(/Your courier performance and delivery report/i, { timeout: 15000 });
   await page.waitForTimeout(15000);
   const finalText = await main.innerText();
