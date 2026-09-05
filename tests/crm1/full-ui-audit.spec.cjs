@@ -26,6 +26,17 @@ async function login(page, key) {
   await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i, { timeout: 10000 });
 }
 
+async function expandNavigation(page) {
+  const groups = page.locator('#nav .crm1-nav-group');
+  const count = await groups.count();
+  for (let i = 0; i < count; i++) {
+    const group = groups.nth(i);
+    if (!(await group.locator('.crm1-nav-group-body').isVisible().catch(() => false))) {
+      await group.locator('.crm1-nav-group-title').click().catch(() => {});
+    }
+  }
+}
+
 async function assertPageReady(page, role, label) {
   const main = page.locator('main');
   await expect(main).toBeVisible();
@@ -78,9 +89,7 @@ async function auditForms(page) {
     await expect(form).toBeVisible();
     const required = form.locator('[required]');
     const rc = await required.count();
-    for (let j = 0; j < rc; j++) {
-      await expect(required.nth(j)).toHaveAttribute('required', '');
-    }
+    for (let j = 0; j < rc; j++) await expect(required.nth(j)).toHaveAttribute('required', '');
   }
 }
 
@@ -113,9 +122,10 @@ test.describe('CRM1 FULL UI AUDIT', () => {
       });
 
       await login(page, role);
+      await expandNavigation(page);
       await assertNoDuplicateIds(page, role, 'dashboard');
 
-      const navButtons = page.locator('#nav button:visible');
+      const navButtons = page.locator('#nav .crm1-nav-group-body > button:visible');
       const navCount = await navButtons.count();
       expect(navCount, `${role}: no visible navigation buttons`).toBeGreaterThan(0);
 
@@ -126,7 +136,8 @@ test.describe('CRM1 FULL UI AUDIT', () => {
       }
 
       for (const label of [...new Set(labels)]) {
-        const btn = page.locator('#nav button:visible').filter({ hasText: label }).first();
+        await expandNavigation(page);
+        const btn = page.locator('#nav .crm1-nav-group-body > button:visible').filter({ hasText: label }).first();
         if (!(await btn.count())) continue;
         await btn.click();
         await page.waitForTimeout(700);
