@@ -20,6 +20,7 @@ function bar(){
  $('ccAgentStatus').onchange=()=>setAgentStatus($('ccAgentStatus').value);
  $('crm1StartCall').onclick=startCall;$('crm1EndCall').onclick=endCall;
  $('crm1LogCall').onclick=null;
+ setCallButtonState(false);
 }
 function syncManualNumberToOrder(number){
  const p=$('pageMobile');if(!p)return;
@@ -75,11 +76,11 @@ function tick(){if(!active)return;const s=Math.floor((Date.now()-active.started)
 function setCallButtonState(inCall){
  const start=$('crm1StartCall'),end=$('crm1EndCall');if(!start||!end)return;
  if(inCall){
-   start.className='btn alt';start.disabled=true;start.style.opacity='.55';start.style.filter='grayscale(.2)';start.style.pointerEvents='none';
-   end.className='btn red';end.disabled=false;end.style.opacity='1';end.style.filter='none';end.style.pointerEvents='auto';
+   start.className='btn alt';start.disabled=true;start.style.opacity='.55';start.style.filter='grayscale(.2)';start.style.pointerEvents='none';start.style.background='#fff';start.style.color='var(--g)';
+   end.className='btn red';end.disabled=false;end.style.opacity='1';end.style.filter='none';end.style.pointerEvents='auto';end.style.background='var(--red)';end.style.color='#fff';
  }else{
-   start.className='btn';start.disabled=false;start.style.opacity='1';start.style.filter='none';start.style.pointerEvents='auto';
-   end.className='btn alt';end.disabled=true;end.style.opacity='1';end.style.filter='none';end.style.pointerEvents='auto';
+   start.className='btn';start.disabled=false;start.style.opacity='1';start.style.filter='none';start.style.pointerEvents='auto';start.style.background='var(--g)';start.style.color='#fff';
+   end.className='btn alt';end.disabled=true;end.style.opacity='1';end.style.filter='none';end.style.pointerEvents='auto';end.style.background='#fff';end.style.color='var(--g)';
  }
 }
 async function startCall(){
@@ -113,7 +114,9 @@ async function endCall(){
 async function boot(){
  for(let i=0;i<30&&!db;i++){await new Promise(r=>setTimeout(r,100));db=window.sb}if(!db)return;
  const {data:{user}}=await db.auth.getUser();if(!user)return;me=user;bar();loadAgent();
+ const sync=()=>syncMobileFromOrder();
  document.addEventListener('crm1WorkspaceCall',e=>{const n=digits(e.detail?.number);if(n)syncManualNumberToOrder(n)});
+ document.addEventListener('crm1LeadCallReady',e=>{const n=digits(e.detail?.mobile);if(!n)return;syncManualNumberToOrder(n);const d=$('crm1DialNumber');if(d)d.value=n});
  document.addEventListener('crm1CallStarted',sync);
  const pageMobile=$('pageMobile');
  if(pageMobile){pageMobile.addEventListener('input',sync);pageMobile.addEventListener('change',sync)}
