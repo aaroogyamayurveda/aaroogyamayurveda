@@ -22,6 +22,12 @@ function bar(){
  // Leave Log Manual Call without a local handler so the existing disposition module can receive the click at document level.
  $('crm1LogCall').onclick=null;
 }
+function syncMobileFromOrder(){
+ const d=$('crm1DialNumber'),p=$('pageMobile');
+ if(!d||!p)return;
+ const n=digits(p.value);
+ if(n)d.value=n;
+}
 async function event(type,payload={}){
  if(!db||!me)return null;
  const mobile=digits($('crm1DialNumber')?.value||$('pageMobile')?.value);
@@ -62,7 +68,13 @@ async function endCall(){
 async function boot(){
  for(let i=0;i<30&&!db;i++){await new Promise(r=>setTimeout(r,100));db=window.sb}if(!db)return;
  const {data:{user}}=await db.auth.getUser();if(!user)return;me=user;bar();loadAgent();
- document.addEventListener('crm1WorkspaceCall',e=>{const n=digits(e.detail?.number);if(n)$('crm1DialNumber').value=n});
+ // Keep Manual Phone Call Console synced with the same mobile loaded into Create Order.
+ const sync=()=>syncMobileFromOrder();
+ document.addEventListener('crm1WorkspaceCall',sync);
+ document.addEventListener('crm1CallStarted',sync);
+ const pageMobile=$('pageMobile');
+ if(pageMobile){pageMobile.addEventListener('input',sync);pageMobile.addEventListener('change',sync);}
+ sync();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
