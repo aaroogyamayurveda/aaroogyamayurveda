@@ -2,7 +2,7 @@
 const fs=require('fs'),path=require('path');
 const dir=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),dealer=read('modules/dealer-ui.js'),config=read('config.js');
+const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),dealer=read('modules/dealer-ui.js'),targets=read('modules/targets-ui.js'),config=read('config.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
 ok('index loads current app module',index.includes('src="./app.js"'));
 ok('index loads operational UI module',index.includes('src="./modules/operations-ui.js"'));
@@ -52,4 +52,5 @@ ok('RTO inspection and restock are implemented',workflow.includes('inspectRtoCas
 ok('dealer management has CRUD and performance controls',index.includes('dealer-ui.js')&&dealer.includes("from('dealers')")&&dealer.includes("from('orders')")&&dealer.includes("from('settlements')")&&dealer.includes('data-dealer-edit')&&dealer.includes('Dealer Performance'));
 ok('inventory uses SKU and warehouse selectors with low-stock attention',ops.includes('inventoryProduct')&&ops.includes('inventoryWarehouse')&&ops.includes('Needs Attention')&&ops.includes('available'));
 ok('import large-file guard is enforced before parsing',imports.includes('MAX_IMPORT_BYTES')&&imports.includes('file.size > MAX_IMPORT_BYTES')&&imports.includes('stopImmediatePropagation'));
+ok('agent targets have management and actual-performance reporting',index.includes('targets-ui.js')&&targets.includes("from('agent_targets')")&&targets.includes("from('orders')")&&targets.includes('Target vs Actual'));
 console.log('CRM2 static smoke suite passed');
