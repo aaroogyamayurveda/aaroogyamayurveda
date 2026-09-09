@@ -50,4 +50,5 @@ ok('NDR lifecycle actions are implemented',workflow.includes('reattemptNdrCase')
 ok('RTO inspection and restock are implemented',workflow.includes('inspectRtoCase')&&workflow.includes('restockRtoCase')&&ops.includes('inspect_rto')&&ops.includes('restock_rto')&&ops.includes('recordInventoryMovement'));
 
 ok('dealer management has CRUD and performance controls',index.includes('dealer-ui.js')&&dealer.includes("from('dealers')")&&dealer.includes("from('orders')")&&dealer.includes("from('settlements')")&&dealer.includes('data-dealer-edit')&&dealer.includes('Dealer Performance'));
+ok('inventory uses SKU and warehouse selectors with low-stock attention',ops.includes('inventoryProduct')&&ops.includes('inventoryWarehouse')&&ops.includes('Needs Attention')&&ops.includes('available'));
 console.log('CRM2 static smoke suite passed');
