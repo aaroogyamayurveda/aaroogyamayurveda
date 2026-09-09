@@ -46,4 +46,7 @@ ok('no service role secret',!config.includes('service_role')&&!app.includes('ser
 ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/')&&!admin.includes('../crm/')&&!admin.includes('../crm1/')&&!management.includes('../crm/')&&!management.includes('../crm1/')&&!imports.includes('../crm/')&&!imports.includes('../crm1/'));
 ok('no Google Drive dependency',![app,data,workflow,finance,ops,admin,management,imports].some(x=>x.includes('Google Drive')));
 for(const f of fs.readdirSync(dir,{recursive:true}))if(typeof f==='string'&&/^.+-(v\d+|final|fix)\.js$/i.test(f))throw new Error('Legacy/versioned CRM2 JS remains: '+f);
+ok('NDR lifecycle actions are implemented',workflow.includes('reattemptNdrCase')&&workflow.includes('closeNdrCase')&&ops.includes('reattempt_ndr')&&ops.includes('close_ndr'));
+ok('RTO inspection and restock are implemented',workflow.includes('inspectRtoCase')&&workflow.includes('restockRtoCase')&&ops.includes('inspect_rto')&&ops.includes('restock_rto')&&ops.includes('recordInventoryMovement'));
+
 console.log('CRM2 static smoke suite passed');
