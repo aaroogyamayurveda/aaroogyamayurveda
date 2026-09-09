@@ -2,7 +2,7 @@
 const fs=require('fs'),path=require('path');
 const dir=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),config=read('config.js');
+const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),dealer=read('modules/dealer-ui.js'),config=read('config.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
 ok('index loads current app module',index.includes('src="./app.js"'));
 ok('index loads operational UI module',index.includes('src="./modules/operations-ui.js"'));
@@ -49,4 +49,5 @@ for(const f of fs.readdirSync(dir,{recursive:true}))if(typeof f==='string'&&/^.+
 ok('NDR lifecycle actions are implemented',workflow.includes('reattemptNdrCase')&&workflow.includes('closeNdrCase')&&ops.includes('reattempt_ndr')&&ops.includes('close_ndr'));
 ok('RTO inspection and restock are implemented',workflow.includes('inspectRtoCase')&&workflow.includes('restockRtoCase')&&ops.includes('inspect_rto')&&ops.includes('restock_rto')&&ops.includes('recordInventoryMovement'));
 
+ok('dealer management has CRUD and performance controls',index.includes('dealer-ui.js')&&dealer.includes("from('dealers')")&&dealer.includes("from('orders')")&&dealer.includes("from('settlements')")&&dealer.includes('data-dealer-edit')&&dealer.includes('Dealer Performance'));
 console.log('CRM2 static smoke suite passed');
