@@ -1,6 +1,7 @@
 /* Zero-dependency static smoke tests. Run with: node crm2/tests/smoke.js */
 const fs=require('fs'),path=require('path');
 const dir=path.resolve(__dirname,'..');
+const repoRoot=path.resolve(__dirname,'../..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
 const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),dealer=read('modules/dealer-ui.js'),targets=read('modules/targets-ui.js'),config=read('config.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
@@ -55,5 +56,5 @@ ok('import large-file guard is enforced before parsing',imports.includes('MAX_IM
 ok('agent targets have management and actual-performance reporting',index.includes('targets-ui.js')&&targets.includes("from('agent_targets')")&&targets.includes("from('orders')")&&targets.includes('Target vs Actual'));
 ok('agent targets support editing existing periods',targets.includes('data-target-edit')&&targets.includes(".update(record)")&&targets.includes('Edit'));
 ok('import error export preserves numeric row and source row data',imports.includes("row:x.row_no")&&imports.includes('row_data:x.raw_data')&&imports.includes('rowData'));
-ok('dealer and target changes are covered by database audit triggers',admin.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&fs.existsSync(path.join(dir,'../supabase/migrations/20260909200000_crm2_audit_dealer_targets.sql')));
+ok('dealer and target changes are covered by database audit triggers',admin.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&fs.existsSync(path.join(repoRoot,'supabase/migrations/20260909200000_crm2_audit_dealer_targets.sql')));
 console.log('CRM2 static smoke suite passed');
