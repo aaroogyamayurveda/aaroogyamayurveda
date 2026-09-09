@@ -54,6 +54,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Verify browser QA secrets are configured
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            CRM2_SUPERADMIN_EMAIL CRM2_SUPERADMIN_PASSWORD \
+            CRM2_ADMIN_EMAIL CRM2_ADMIN_PASSWORD \
+            CRM2_MANAGER_EMAIL CRM2_MANAGER_PASSWORD \
+            CRM2_TEAMLEADER_EMAIL CRM2_TEAMLEADER_PASSWORD \
+            CRM2_AGENT_EMAIL CRM2_AGENT_PASSWORD \
+            CRM2_QA_EMAIL CRM2_QA_PASSWORD \
+            CRM2_VERIFICATION_EMAIL CRM2_VERIFICATION_PASSWORD \
+            CRM2_WAREHOUSE_EMAIL CRM2_WAREHOUSE_PASSWORD \
+            CRM2_ACCOUNTS_EMAIL CRM2_ACCOUNTS_PASSWORD \
+            CRM2_DEALER_EMAIL CRM2_DEALER_PASSWORD \
+            CRM2_MIS_EMAIL CRM2_MIS_PASSWORD; do
+            if [ -z "${!name:-}" ]; then echo "Missing GitHub Actions secret: $name"; missing=1; fi
+          done
+          test "$missing" -eq 0
       - name: Install Playwright dependencies
         working-directory: crm2/tests
         run: npm install --no-audit --no-fund
