@@ -51,4 +51,5 @@ ok('RTO inspection and restock are implemented',workflow.includes('inspectRtoCas
 
 ok('dealer management has CRUD and performance controls',index.includes('dealer-ui.js')&&dealer.includes("from('dealers')")&&dealer.includes("from('orders')")&&dealer.includes("from('settlements')")&&dealer.includes('data-dealer-edit')&&dealer.includes('Dealer Performance'));
 ok('inventory uses SKU and warehouse selectors with low-stock attention',ops.includes('inventoryProduct')&&ops.includes('inventoryWarehouse')&&ops.includes('Needs Attention')&&ops.includes('available'));
+ok('import large-file guard is enforced before parsing',imports.includes('MAX_IMPORT_BYTES')&&imports.includes('file.size > MAX_IMPORT_BYTES')&&imports.includes('stopImmediatePropagation'));
 console.log('CRM2 static smoke suite passed');
