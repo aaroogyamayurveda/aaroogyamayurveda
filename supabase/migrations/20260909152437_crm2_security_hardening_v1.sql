@@ -1,0 +1,17 @@
+create schema if not exists crm2_private;
+create or replace function public.crm2_is_manager() returns boolean language sql stable security definer set search_path = public as $$ select public.crm2_role() in ('super_admin','admin','manager','assistant_manager','team_leader','qa','verification','warehouse','dispatch','dealer_manager','accounts','mis') $$;
+revoke all on function public.crm2_role() from public;
+revoke all on function public.crm2_is_manager() from public;
+grant execute on function public.crm2_role() to authenticated;
+grant execute on function public.crm2_is_manager() to authenticated;
+drop policy if exists customer_update on public.customers;
+create policy customer_update on public.customers for update to authenticated using (public.crm2_is_manager()) with check (public.crm2_is_manager());
+drop policy if exists lead_update on public.leads;
+create policy lead_update on public.leads for update to authenticated using (public.crm2_is_manager() or assigned_to = auth.uid()) with check (public.crm2_is_manager() or assigned_to = auth.uid());
+drop policy if exists order_update on public.orders;
+create policy order_update on public.orders for update to authenticated using (public.crm2_is_manager() or agent_id = auth.uid()) with check (public.crm2_is_manager() or agent_id = auth.uid());
+drop policy if exists verification_write on public.order_verifications;
+create policy verification_write on public.order_verifications for all to authenticated using (public.crm2_is_manager() or verifier_id = auth.uid()) with check (public.crm2_is_manager() or verifier_id = auth.uid());
+drop policy if exists audit_manager_read on public.audit_logs;
+create policy audit_manager_read on public.audit_logs for select to authenticated using (public.crm2_is_manager());
+revoke insert, update, delete on public.audit_logs from authenticated;
