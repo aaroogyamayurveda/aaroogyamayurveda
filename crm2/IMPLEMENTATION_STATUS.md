@@ -29,6 +29,17 @@
 - CSV/XLSX import: local parse → preview → column mapping → validation/duplicate check → staged import rows → lead import
 - Audit log visibility for manager roles
 
+## Operational backend hardening completed
+- Fast-order workflow now reuses an existing customer by mobile before creating a new customer.
+- Fast-order workflow creates the corresponding order item and status history.
+- Shipment status workflow validates supported states and writes a correct shipment-event timeline.
+- Shipment state changes synchronize the linked order status.
+- NDR case creation uses the actual schema fields and avoids duplicate open cases.
+- RTO case creation uses the actual schema fields and avoids duplicate open cases.
+- Payment workflow maps to the actual payment schema.
+- Smoke coverage now verifies shipment-event, NDR/RTO and order-item field mappings.
+- `crm2_is_manager()` was changed back to SECURITY INVOKER and its execute privilege is explicitly controlled; Security Advisor is clean again.
+
 ## Security / architecture
 - Browser contains only the CRM2 publishable key.
 - No service-role key or operational third-party credentials are stored in frontend code.
@@ -39,6 +50,7 @@
 
 ## Remaining build track
 - Complete manager/admin configuration screens (users, teams, dispositions, campaigns, products, warehouses, couriers).
-- Add richer drill-down reports, assignment controls, inventory movements, NDR/RTO actions and reconciliation workflows.
+- Add richer drill-down reports, assignment controls, inventory movement UI, NDR/RTO action UI and reconciliation workflows.
+- Optimize RLS policies using cached auth expressions and consolidate duplicate permissive policies where safe.
 - Add server-side adapter endpoints for VICIdial/couriers only when the relevant credentials/infrastructure are intentionally provisioned.
 - Complete end-to-end browser QA and deployment verification before calling CRM2 production-ready.
