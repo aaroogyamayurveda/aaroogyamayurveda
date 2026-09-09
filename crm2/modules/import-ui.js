@@ -13,4 +13,4 @@ export function enhanceImportPage(){const root=document.querySelector('#main');i
 new MutationObserver(enhanceImportPage).observe(document.body,{childList:true,subtree:true});
 
 export const MAX_IMPORT_BYTES=10*1024*1024;
-document.addEventListener('change',event=>{const input=event.target.closest('#file[type="file"]');const file=input?.files?.[0];if(!file||file.size<=MAX_IMPORT_BYTES)return;event.stopImmediatePropagation();input.value='';alert('This file is larger than 10 MB. Split it into smaller files before import.');},true);
+document.addEventListener('change',event=>{const input=event.target.closest('#file[type="file"]');const file=input?.files?.[0];if(!file||!(file.size > MAX_IMPORT_BYTES))return;event.stopImmediatePropagation();input.value='';alert('This file is larger than 10 MB. Split it into smaller files before import.');},true);
