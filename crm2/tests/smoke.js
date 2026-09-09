@@ -2,7 +2,7 @@
 const fs=require('fs'),path=require('path');
 const dir=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),config=read('config.js');
+const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),config=read('config.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
 ok('index loads current app module',index.includes('src="./app.js"'));
 ok('index loads operational UI module',index.includes('src="./modules/operations-ui.js"'));
@@ -24,11 +24,11 @@ ok('delivery UI exposes NDR/RTO actions',ops.includes('data-ship')&&ops.includes
 ok('accounts UI exposes finance workflows',ops.includes('recordCodRemittance')&&ops.includes('recordSettlement')&&ops.includes('recordRefund')&&ops.includes('recordPayment'));
 ok('inventory UI exposes stock movement workflow',ops.includes('recordInventoryMovement')&&ops.includes('inventory_movements'));
 ok('payments UI uses schema-correct type',app.includes("select('order_id,amount,type,status,reference,created_at')")&&app.includes('x.type'));
-ok('admin module provides role-aware navigation',app.includes('admin-ui.js')||index.includes('admin-ui.js'));
-ok('admin module owns configuration entities',index.includes('admin-ui.js'));
-ok('assignment workflow is exposed',app.includes('lead_assignments')&&app.includes('assigned_agent_id'));
-ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role'));
-ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/'));
-ok('no Google Drive dependency',!app.includes('Google Drive')&&!data.includes('Google Drive')&&!workflow.includes('Google Drive')&&!finance.includes('Google Drive')&&!ops.includes('Google Drive'));
+ok('admin module provides role-aware navigation',admin.includes('currentProfile')&&admin.includes('ROLES')&&admin.includes('Admin / Config'));
+ok('admin module owns configuration entities',admin.includes('disposition_levels')&&admin.includes('campaigns')&&admin.includes('products')&&admin.includes('warehouses')&&admin.includes('couriers'));
+ok('assignment workflow is exposed',admin.includes('lead_assignments')&&admin.includes('assigned_to')&&admin.includes('agent_id'));
+ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role')&&!admin.includes('service_role'));
+ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/')&&!admin.includes('../crm/')&&!admin.includes('../crm1/'));
+ok('no Google Drive dependency',!app.includes('Google Drive')&&!data.includes('Google Drive')&&!workflow.includes('Google Drive')&&!finance.includes('Google Drive')&&!ops.includes('Google Drive')&&!admin.includes('Google Drive'));
 for(const f of fs.readdirSync(dir,{recursive:true}))if(typeof f==='string'&&/^.+-(v\d+|final|fix)\.js$/i.test(f))throw new Error('Legacy/versioned CRM2 JS remains: '+f);
 console.log('CRM2 static smoke suite passed');
