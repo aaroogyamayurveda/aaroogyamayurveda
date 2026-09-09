@@ -6,6 +6,7 @@ const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
 ok('index loads current app module',index.includes('src="./app.js"'));
 ok('index loads operational UI module',index.includes('src="./modules/operations-ui.js"'));
+ok('index loads admin UI module',index.includes('src="./modules/admin-ui.js"'));
 ok('index does not load duplicate Supabase client',!index.includes('supabase-js'));
 ok('no legacy/fix JS',!index.includes('path-fix.js')&&!index.includes('routing-fix.js')&&!index.includes('lead-upload-fix.js'));
 ok('manual mobile calling is first-class',app.includes('tel:')&&data.includes('manual_mobile'));
@@ -23,6 +24,9 @@ ok('delivery UI exposes NDR/RTO actions',ops.includes('data-ship')&&ops.includes
 ok('accounts UI exposes finance workflows',ops.includes('recordCodRemittance')&&ops.includes('recordSettlement')&&ops.includes('recordRefund')&&ops.includes('recordPayment'));
 ok('inventory UI exposes stock movement workflow',ops.includes('recordInventoryMovement')&&ops.includes('inventory_movements'));
 ok('payments UI uses schema-correct type',app.includes("select('order_id,amount,type,status,reference,created_at')")&&app.includes('x.type'));
+ok('admin module provides role-aware navigation',app.includes('admin-ui.js')||index.includes('admin-ui.js'));
+ok('admin module owns configuration entities',index.includes('admin-ui.js'));
+ok('assignment workflow is exposed',app.includes('lead_assignments')&&app.includes('assigned_agent_id'));
 ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role'));
 ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/'));
 ok('no Google Drive dependency',!app.includes('Google Drive')&&!data.includes('Google Drive')&&!workflow.includes('Google Drive')&&!finance.includes('Google Drive')&&!ops.includes('Google Drive'));
