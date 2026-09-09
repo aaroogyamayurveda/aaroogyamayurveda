@@ -53,4 +53,5 @@ ok('inventory uses SKU and warehouse selectors with low-stock attention',ops.inc
 ok('import large-file guard is enforced before parsing',imports.includes('MAX_IMPORT_BYTES')&&imports.includes('file.size > MAX_IMPORT_BYTES')&&imports.includes('stopImmediatePropagation'));
 ok('agent targets have management and actual-performance reporting',index.includes('targets-ui.js')&&targets.includes("from('agent_targets')")&&targets.includes("from('orders')")&&targets.includes('Target vs Actual'));
 ok('import error export preserves numeric row and source row data',imports.includes("row:x.row_no")&&imports.includes('row_data:x.raw_data')&&imports.includes('rowData'));
+ok('dealer and target changes are covered by database audit triggers',admin.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&fs.existsSync(path.join(dir,'../supabase/migrations/20260909162000_crm2_audit_critical_config.sql')));
 console.log('CRM2 static smoke suite passed');
