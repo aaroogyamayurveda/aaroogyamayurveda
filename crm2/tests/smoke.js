@@ -6,10 +6,10 @@ function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS
 ok('index loads current app module',index.includes('src="./app.js"'));
 ok('index does not load duplicate Supabase client',!index.includes('supabase-js'));
 ok('index has no legacy crm2 JS',!index.includes('path-fix.js')&&!index.includes('routing-fix.js')&&!index.includes('lead-upload-fix.js'));
-ok('app has manual calling',app.includes('manual_mobile')&&app.includes('tel:'));
-ok('app uses working lead status',app.includes("status='working'")||app.includes("status,disposition_id")||app.includes("'working'"));
+ok('manual mobile calling is first-class',app.includes('href="tel:')&&data.includes("call_source='manual_mobile'"));
+ok('working lead status is used',data.includes("'working'"));
 ok('call logging stores disposition',data.includes('disposition_id'));
-ok('app has CRM2 Supabase tables',app.includes("from('leads')")&&app.includes("from('orders')")&&app.includes("from('customers')"));
+ok('CRM2 tables are wired',app.includes("from('leads')")&&app.includes("from('orders')")&&app.includes("from('customers')"));
 ok('import workflow exists',app.includes('Validate & Stage')&&app.includes('Import Valid Leads')&&app.includes('import_rows'));
 ok('customer 360 exists',app.includes('customer360'));
 ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role'));
