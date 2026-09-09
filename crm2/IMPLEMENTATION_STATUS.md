@@ -21,10 +21,10 @@
 - Fast order creation with product, quantity, pricing, payment and priority
 - Order status lifecycle and status history
 - Verification queue and decision updates
-- Inventory visibility
+- Inventory visibility plus movement history and movement recording
 - Dealer/distributor visibility
-- Shipment/delivery visibility
-- Payments, COD remittance and settlement views
+- Shipment/delivery visibility plus NDR/RTO operation actions and queues
+- Payments, COD remittance, dealer settlement and refund workflows
 - MIS summary and order-status distribution
 - CSV/XLSX import: local parse → preview → column mapping → validation/duplicate check → staged import rows → lead import
 - Audit log visibility for manager roles
@@ -37,7 +37,8 @@
 - NDR case creation uses the actual schema fields and avoids duplicate open cases.
 - RTO case creation uses the actual schema fields and avoids duplicate open cases.
 - Payment workflow maps to the actual payment schema.
-- Smoke coverage now verifies shipment-event, NDR/RTO and order-item field mappings.
+- Finance adapters use server-side Supabase RPC functions for COD remittance, settlement, refund and inventory movement.
+- Smoke coverage verifies shipment-event, NDR/RTO, order-item, finance and inventory UI field mappings.
 - `crm2_is_manager()` was changed back to SECURITY INVOKER and its execute privilege is explicitly controlled; Security Advisor is clean again.
 
 ## Security / architecture
@@ -50,7 +51,8 @@
 
 ## Remaining build track
 - Complete manager/admin configuration screens (users, teams, dispositions, campaigns, products, warehouses, couriers).
-- Add richer drill-down reports, assignment controls, inventory movement UI, NDR/RTO action UI and reconciliation workflows.
+- Add richer drill-down reports, assignment/reassignment controls and customer/order operational actions.
 - Optimize RLS policies using cached auth expressions and consolidate duplicate permissive policies where safe.
+- Improve import staging with reusable mapping templates, row-level downloadable error reporting and more efficient large-file duplicate checks.
 - Add server-side adapter endpoints for VICIdial/couriers only when the relevant credentials/infrastructure are intentionally provisioned.
 - Complete end-to-end browser QA and deployment verification before calling CRM2 production-ready.
