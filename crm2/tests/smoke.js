@@ -49,9 +49,11 @@ for(const f of fs.readdirSync(dir,{recursive:true}))if(typeof f==='string'&&/^.+
 ok('NDR lifecycle actions are implemented',workflow.includes('reattemptNdrCase')&&workflow.includes('closeNdrCase')&&ops.includes('reattempt_ndr')&&ops.includes('close_ndr'));
 ok('RTO inspection and restock are implemented',workflow.includes('inspectRtoCase')&&workflow.includes('restockRtoCase')&&ops.includes('inspect_rto')&&ops.includes('restock_rto')&&ops.includes('recordInventoryMovement'));
 ok('dealer management has CRUD and performance controls',index.includes('dealer-ui.js')&&dealer.includes("from('dealers')")&&dealer.includes("from('orders')")&&dealer.includes("from('settlements')")&&dealer.includes('data-dealer-edit')&&dealer.includes('Dealer Performance'));
+ok('dealer removal is safe and non-destructive',dealer.includes("status:'inactive'")&&dealer.includes('Mark it inactive instead'));
 ok('inventory uses SKU and warehouse selectors with low-stock attention',ops.includes('inventoryProduct')&&ops.includes('inventoryWarehouse')&&ops.includes('Needs Attention')&&ops.includes('available'));
 ok('import large-file guard is enforced before parsing',imports.includes('MAX_IMPORT_BYTES')&&imports.includes('file.size > MAX_IMPORT_BYTES')&&imports.includes('stopImmediatePropagation'));
 ok('agent targets have management and actual-performance reporting',index.includes('targets-ui.js')&&targets.includes("from('agent_targets')")&&targets.includes("from('orders')")&&targets.includes('Target vs Actual'));
+ok('agent targets support editing existing periods',targets.includes('data-target-edit')&&targets.includes(".update(record)")&&targets.includes('Edit'));
 ok('import error export preserves numeric row and source row data',imports.includes("row:x.row_no")&&imports.includes('row_data:x.raw_data')&&imports.includes('rowData'));
-ok('dealer and target changes are covered by database audit triggers',admin.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&fs.existsSync(path.join(dir,'../supabase/migrations/20260909162000_crm2_audit_critical_config.sql')));
+ok('dealer and target changes are covered by database audit triggers',admin.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&fs.existsSync(path.join(dir,'../supabase/migrations/20260909200000_crm2_audit_dealer_targets.sql')));
 console.log('CRM2 static smoke suite passed');
