@@ -38,7 +38,7 @@ ok('same-file duplicate detection exists',imports.includes('duplicateMobile')&&i
 ok('import quality panel is wired to real errors',imports.includes('window.crm2ImportErrors')&&imports.includes('downloadErrorReport(window.crm2ImportErrors'));
 ok('mapping template saves actual mapping',imports.includes('window.crm2ImportMapping')&&imports.includes('saveMappingTemplate(name,window.crm2ImportMapping)'));
 ok('role-aware core navigation hides restricted pages',admin.includes('RESTRICTED_PAGES')&&admin.includes('applyRoleNavigation'));
-ok('fast order UI supports mobile customer matching',ops.includes('createOrderFromLead')&&ops.includes('Customer Mobile')&&ops.includes('normalizeMobile')&&ops.includes('data-fast-order'));
+ok('fast order UI supports mobile customer matching',ops.includes('createOrderFromLead')&&ops.includes('Customer Mobile')&&ops.includes('normalizeMobile')&&ops.includes('fastOrderForm'));
 ok('fast order uses product selector',ops.includes('getProducts')&&ops.includes('productId'));
 ok('follow-up UI provides due/overdue/missed/reschedule workflow',index.includes('workflow-ui.js'));
 ok('verification UI exposes history and decisions',index.includes('workflow-ui.js'));
