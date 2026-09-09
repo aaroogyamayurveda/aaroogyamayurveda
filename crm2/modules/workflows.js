@@ -1,4 +1,5 @@
 import {sb,normalizeMobile} from '../data.js';
+import {recordInventoryMovement} from './finance.js';
 
 export async function createOrderFromLead({lead,productId,quantity,unitPrice,paymentMode,priority,remarks}){
   if(!lead?.id) throw new Error('Lead is required.');
@@ -40,4 +41,27 @@ export async function createRtoCase({shipmentId,reason,remarks}){
 
 export async function recordPayment({orderId,amount,mode,status='collected',reference,type='collection'}){
   const {data,error}=await sb.from('payments').insert({order_id:orderId,amount:Math.max(0,Number(amount)||0),type:type||mode||'COD',status,reference:reference||null}).select().single();if(error)throw error;return data;
+}
+
+export async function reattemptNdrCase({caseId,nextActionAt,remarks=''}){
+  const {data:nd,error:readError}=await sb.from('ndr_cases').select('id,shipment_id,attempt_no,status').eq('id',caseId).single();if(readError)throw readError;
+  if(nd.status!=='open')throw new Error('Only open NDR cases can be reattempted.');
+  await changeShipmentStatus(nd.shipment_id,'out_for_delivery',remarks||'NDR reattempt scheduled');
+  const {data,error}=await sb.from('ndr_cases').update({attempt_no:(Number(nd.attempt_no)||0)+1,next_action_at:nextActionAt||null}).eq('id',caseId).select().single();if(error)throw error;return data;
+}
+
+export async function closeNdrCase({caseId}){
+  const {data,error}=await sb.from('ndr_cases').update({status:'closed',next_action_at:null}).eq('id',caseId).eq('status','open').select().maybeSingle();if(error)throw error;if(!data)throw new Error('NDR case is already closed or unavailable.');return data;
+}
+
+export async function inspectRtoCase({caseId,inspectionStatus}){
+  const {data,error}=await sb.from('rto_cases').update({inspection_status:inspectionStatus||'inspected',received_at:new Date().toISOString(),status:'inspected'}).eq('id',caseId).in('status',['open','inspected']).select().maybeSingle();if(error)throw error;if(!data)throw new Error('RTO case is unavailable for inspection.');return data;
+}
+
+export async function restockRtoCase({caseId,sku,warehouseId,quantity,remarks=''}){
+  const qty=Math.max(1,Number(quantity)||0);if(!sku||!warehouseId||!qty)throw new Error('SKU, warehouse and a positive quantity are required to restock.');
+  const {data:rto,error:readError}=await sb.from('rto_cases').select('id,status').eq('id',caseId).single();if(readError)throw readError;
+  if(rto.status==='restocked')throw new Error('This RTO case has already been restocked.');
+  await recordInventoryMovement({sku,warehouseId,movementType:'inward',quantity:qty,reason:remarks||'RTO restock',referenceType:'rto_case',referenceId:caseId});
+  const {data,error}=await sb.from('rto_cases').update({restocked:true,status:'restocked',received_at:new Date().toISOString()}).eq('id',caseId).select().single();if(error)throw error;return data;
 }
