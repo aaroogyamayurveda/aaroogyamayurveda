@@ -1,14 +1,74 @@
 name: CRM2 CI
+
 on:
   push:
-    paths: ['crm2/**']
+    paths:
+      - 'crm2/**'
+      - '.github/workflows/crm2-ci.yml'
   pull_request:
-    paths: ['crm2/**']
+    paths:
+      - 'crm2/**'
+      - '.github/workflows/crm2-ci.yml'
+  workflow_dispatch:
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: {node-version: '20'}
+        with:
+          node-version: '20'
       - run: node crm2/tests/smoke.js
+
+  browser:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CRM2_BASE_URL: https://aaroogyamayurveda.in/crm2/
+      CRM2_SUPERADMIN_EMAIL: ${{ secrets.CRM2_SUPERADMIN_EMAIL }}
+      CRM2_SUPERADMIN_PASSWORD: ${{ secrets.CRM2_SUPERADMIN_PASSWORD }}
+      CRM2_ADMIN_EMAIL: ${{ secrets.CRM2_ADMIN_EMAIL }}
+      CRM2_ADMIN_PASSWORD: ${{ secrets.CRM2_ADMIN_PASSWORD }}
+      CRM2_MANAGER_EMAIL: ${{ secrets.CRM2_MANAGER_EMAIL }}
+      CRM2_MANAGER_PASSWORD: ${{ secrets.CRM2_MANAGER_PASSWORD }}
+      CRM2_TEAMLEADER_EMAIL: ${{ secrets.CRM2_TEAMLEADER_EMAIL }}
+      CRM2_TEAMLEADER_PASSWORD: ${{ secrets.CRM2_TEAMLEADER_PASSWORD }}
+      CRM2_AGENT_EMAIL: ${{ secrets.CRM2_AGENT_EMAIL }}
+      CRM2_AGENT_PASSWORD: ${{ secrets.CRM2_AGENT_PASSWORD }}
+      CRM2_QA_EMAIL: ${{ secrets.CRM2_QA_EMAIL }}
+      CRM2_QA_PASSWORD: ${{ secrets.CRM2_QA_PASSWORD }}
+      CRM2_VERIFICATION_EMAIL: ${{ secrets.CRM2_VERIFICATION_EMAIL }}
+      CRM2_VERIFICATION_PASSWORD: ${{ secrets.CRM2_VERIFICATION_PASSWORD }}
+      CRM2_WAREHOUSE_EMAIL: ${{ secrets.CRM2_WAREHOUSE_EMAIL }}
+      CRM2_WAREHOUSE_PASSWORD: ${{ secrets.CRM2_WAREHOUSE_PASSWORD }}
+      CRM2_ACCOUNTS_EMAIL: ${{ secrets.CRM2_ACCOUNTS_EMAIL }}
+      CRM2_ACCOUNTS_PASSWORD: ${{ secrets.CRM2_ACCOUNTS_PASSWORD }}
+      CRM2_DEALER_EMAIL: ${{ secrets.CRM2_DEALER_EMAIL }}
+      CRM2_DEALER_PASSWORD: ${{ secrets.CRM2_DEALER_PASSWORD }}
+      CRM2_MIS_EMAIL: ${{ secrets.CRM2_MIS_EMAIL }}
+      CRM2_MIS_PASSWORD: ${{ secrets.CRM2_MIS_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Playwright dependencies
+        working-directory: crm2/tests
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        working-directory: crm2/tests
+        run: npx playwright install --with-deps chromium
+      - name: Run CRM2 browser QA
+        working-directory: crm2/tests
+        run: npm test
+      - name: Upload Playwright evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm2-playwright-evidence
+          path: |
+            crm2/tests/test-results/
+            crm2/tests/playwright-report/
+          if-no-files-found: ignore
