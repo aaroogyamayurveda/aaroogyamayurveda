@@ -34,7 +34,7 @@ async function dealerForm(existing=null){
 async function deactivateDealer(id){
   const {count,error:countError}=await sb.from('orders').select('id',{count:'exact',head:true}).eq('dealer_id',id);
   if(countError)throw countError;
-  const message=count?'This dealer has orders and will be marked inactive, not deleted.':'Mark this dealer inactive?';
+  const message=count?'This dealer has orders. Mark it inactive instead of deleting it?':'Mark this dealer inactive instead of deleting it?';
   if(!confirm(message))return;
   const {error}=await sb.from('dealers').update({status:'inactive'}).eq('id',id);
   if(error)throw error;
