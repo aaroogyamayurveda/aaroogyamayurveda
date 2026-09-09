@@ -1,0 +1,1 @@
+CRM2 source is isolated from CRM1 and uses a dedicated Supabase project.
