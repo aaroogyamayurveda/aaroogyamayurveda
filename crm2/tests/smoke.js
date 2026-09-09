@@ -27,6 +27,10 @@ ok('payments UI uses schema-correct type',app.includes("select('order_id,amount,
 ok('admin module provides role-aware navigation',admin.includes('currentProfile')&&admin.includes('ROLES')&&admin.includes('Admin / Config'));
 ok('admin module owns configuration entities',admin.includes('disposition_levels')&&admin.includes('campaigns')&&admin.includes('products')&&admin.includes('warehouses')&&admin.includes('couriers'));
 ok('assignment workflow is exposed',admin.includes('lead_assignments')&&admin.includes('assigned_to')&&admin.includes('agent_id'));
+ok('bulk assignment and lead filters exist',admin.includes('Bulk Assign')&&admin.includes('data-bulk-lead')&&admin.includes('searchAssign')&&admin.includes('selectedLeadIds'));
+ok('MIS drilldown reporting exists',admin.includes('MIS Drilldown')&&admin.includes('agent_id')&&admin.includes('campaign_id')&&admin.includes('conversion'));
+ok('import mapping templates and row error export exist',app.includes('mapping template')&&app.includes('Download Error Report')&&app.includes('import_rows'));
+ok('same-file duplicate detection exists',app.includes('duplicateMobile')&&app.includes('seenMobiles'));
 ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role')&&!admin.includes('service_role'));
 ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/')&&!admin.includes('../crm/')&&!admin.includes('../crm1/'));
 ok('no Google Drive dependency',!app.includes('Google Drive')&&!data.includes('Google Drive')&&!workflow.includes('Google Drive')&&!finance.includes('Google Drive')&&!ops.includes('Google Drive')&&!admin.includes('Google Drive'));
