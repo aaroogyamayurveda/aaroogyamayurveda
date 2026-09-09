@@ -1,5 +1,2 @@
-/* CRM2 public configuration. Only the publishable key belongs here. */
-window.CRM2_CONFIG={
-  supabaseUrl:'https://ukpfmlhkvwgoqrrgdump.supabase.co',
-  supabaseKey:'REPLACE_WITH_SUPABASE_PUBLISHABLE_KEY'
-};
+/* CRM2 public configuration. This key is intentionally publishable; no service-role secret belongs in the browser. */
+window.CRM2_CONFIG={supabaseUrl:'https://ukpfmlhkvwgoqrrgdump.supabase.co',supabaseKey:'sb_publishable_zqG3MpIMAfAdCwD3sGQT-A_xj5_5N28'};
