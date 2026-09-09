@@ -48,9 +48,9 @@ ok('no Google Drive dependency',![app,data,workflow,finance,ops,admin,management
 for(const f of fs.readdirSync(dir,{recursive:true}))if(typeof f==='string'&&/^.+-(v\d+|final|fix)\.js$/i.test(f))throw new Error('Legacy/versioned CRM2 JS remains: '+f);
 ok('NDR lifecycle actions are implemented',workflow.includes('reattemptNdrCase')&&workflow.includes('closeNdrCase')&&ops.includes('reattempt_ndr')&&ops.includes('close_ndr'));
 ok('RTO inspection and restock are implemented',workflow.includes('inspectRtoCase')&&workflow.includes('restockRtoCase')&&ops.includes('inspect_rto')&&ops.includes('restock_rto')&&ops.includes('recordInventoryMovement'));
-
 ok('dealer management has CRUD and performance controls',index.includes('dealer-ui.js')&&dealer.includes("from('dealers')")&&dealer.includes("from('orders')")&&dealer.includes("from('settlements')")&&dealer.includes('data-dealer-edit')&&dealer.includes('Dealer Performance'));
 ok('inventory uses SKU and warehouse selectors with low-stock attention',ops.includes('inventoryProduct')&&ops.includes('inventoryWarehouse')&&ops.includes('Needs Attention')&&ops.includes('available'));
 ok('import large-file guard is enforced before parsing',imports.includes('MAX_IMPORT_BYTES')&&imports.includes('file.size > MAX_IMPORT_BYTES')&&imports.includes('stopImmediatePropagation'));
 ok('agent targets have management and actual-performance reporting',index.includes('targets-ui.js')&&targets.includes("from('agent_targets')")&&targets.includes("from('orders')")&&targets.includes('Target vs Actual'));
+ok('import error export preserves numeric row and source row data',imports.includes("row:x.row_no")&&imports.includes('row_data:x.raw_data')&&imports.includes('rowData'));
 console.log('CRM2 static smoke suite passed');
