@@ -31,11 +31,14 @@ async function dealerForm(existing=null){
   }catch(error){$('dealerMsg').textContent=fail(error)}};
 }
 
-async function removeDealer(id){
-  const {count,error:countError}=await sb.from('orders').select('id',{count:'exact',head:true}).eq('dealer_id',id);if(countError)throw countError;
-  if(count)throw new Error('A dealer with orders cannot be removed. Mark it inactive instead.');
-  if(!confirm('Remove this dealer permanently?'))return;
-  const {error}=await sb.from('dealers').delete().eq('id',id);if(error)throw error;await renderDealers();
+async function deactivateDealer(id){
+  const {count,error:countError}=await sb.from('orders').select('id',{count:'exact',head:true}).eq('dealer_id',id);
+  if(countError)throw countError;
+  const message=count?'This dealer has orders and will be marked inactive, not deleted.':'Mark this dealer inactive?';
+  if(!confirm(message))return;
+  const {error}=await sb.from('dealers').update({status:'inactive'}).eq('id',id);
+  if(error)throw error;
+  await renderDealers();
 }
 
 export async function renderDealers(){
@@ -50,11 +53,11 @@ export async function renderDealers(){
   const performance=new Map();
   for(const order of orderResult.data||[]){const v=performance.get(order.dealer_id)||{orders:0,revenue:0,delivered:0,settled:0};v.orders++;v.revenue+=Number(order.total||0);if(order.status==='delivered')v.delivered++;performance.set(order.dealer_id,v);}
   for(const settlement of settlementResult.data||[]){const v=performance.get(settlement.party_id)||{orders:0,revenue:0,delivered:0,settled:0};v.settled+=Number(settlement.amount||0);performance.set(settlement.party_id,v);}
-  const rows=(dealerResult.data||[]).map(x=>{const p=performance.get(x.id)||{orders:0,revenue:0,delivered:0,settled:0};return `<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.type)}</td><td>${esc(x.territory||'—')}</td><td>${p.orders}</td><td>${money(p.revenue)}</td><td>${p.delivered}</td><td>${money(p.settled)}</td><td>${esc(x.status)}</td><td>${manage?`<button class="btn alt" data-dealer-edit="${x.id}">Edit</button> <button class="btn alt" data-dealer-remove="${x.id}">Remove</button>`:''}</td></tr>`;}).join('');
+  const rows=(dealerResult.data||[]).map(x=>{const p=performance.get(x.id)||{orders:0,revenue:0,delivered:0,settled:0};return `<tr><td>${esc(x.code)}</td><td>${esc(x.name)}</td><td>${esc(x.type)}</td><td>${esc(x.territory||'—')}</td><td>${p.orders}</td><td>${money(p.revenue)}</td><td>${p.delivered}</td><td>${money(p.settled)}</td><td>${esc(x.status)}</td><td>${manage?`<button class="btn alt" data-dealer-edit="${x.id}">Edit</button> <button class="btn alt" data-dealer-remove="${x.id}">Deactivate</button>`:''}</td></tr>`;}).join('');
   m.innerHTML=`<div class="title"><h2>Dealer / Distributor</h2>${manage?'<button class="btn" id="newDealer">New Dealer</button>':''}</div><section class="panel"><h3>Dealer Performance</h3><p class="muted">Order volume, revenue, delivered orders and recorded dealer settlements.</p><div class="tablewrap"><table><thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Territory</th><th>Orders</th><th>Revenue</th><th>Delivered</th><th>Settled</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="muted">No dealers.</td></tr>'}</tbody></table></div></section>`;
   $('newDealer')?.addEventListener('click',()=>dealerForm());
   m.querySelectorAll('[data-dealer-edit]').forEach(button=>button.addEventListener('click',()=>dealerForm((dealerResult.data||[]).find(x=>x.id===button.dataset.dealerEdit))));
-  m.querySelectorAll('[data-dealer-remove]').forEach(button=>button.addEventListener('click',()=>removeDealer(button.dataset.dealerRemove).catch(error=>alert(fail(error)))));
+  m.querySelectorAll('[data-dealer-remove]').forEach(button=>button.addEventListener('click',()=>deactivateDealer(button.dataset.dealerRemove).catch(error=>alert(fail(error)))));
 }
 
 document.addEventListener('click',event=>{
