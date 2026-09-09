@@ -1,1 +1,0 @@
-Legacy CRM2 scripts are not part of the current application.

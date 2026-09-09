@@ -1,1 +1,0 @@
-Legacy CRM2 files are intentionally excluded from the new application. Only index.html, app.js, styles.css, config.js and documented support files are current.
