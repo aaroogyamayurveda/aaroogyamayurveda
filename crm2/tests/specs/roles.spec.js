@@ -48,7 +48,7 @@ test('super_admin: full navigation is available', async ({ page }) => {
   test.skip(!c, 'Missing super-admin secrets');
   await login(page, c.email, c.password);
   for (const label of ['Dashboard', 'Leads', 'Customers', 'Calling', 'Follow-ups', 'Orders', 'Verification', 'Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log']) {
-    await expect(page.locator('[data-page]').filter({ hasText: label })).toBeVisible();
+    await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible();
   }
 });
 
@@ -57,7 +57,7 @@ test('agent: management-only navigation is hidden', async ({ page }) => {
   test.skip(!c, 'Missing agent secrets');
   await login(page, c.email, c.password);
   for (const label of ['Dealers', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log']) {
-    await expect(page.locator('[data-page]').filter({ hasText: label })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(0);
   }
 });
 
