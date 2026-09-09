@@ -1,0 +1,12 @@
+revoke execute on function public.crm2_audit_row_change() from public, anon;
+revoke execute on function public.crm2_inventory_move(text, uuid, text, integer, text, text, uuid) from public, anon;
+revoke execute on function public.crm2_permanent_delete_lead(uuid, text) from public, anon;
+revoke execute on function public.crm2_soft_delete_lead(uuid, text) from public, anon;
+revoke execute on function public.crm2_touch() from public, anon;
+revoke execute on function public.crm2_transition_shipment(uuid, text, text, text) from public, anon;
+revoke execute on function public.crm2_handle_new_user() from public, anon, authenticated;
+revoke execute on function public.crm2_list_active_agents() from public, anon;
+grant execute on function public.crm2_soft_delete_lead(uuid, text) to authenticated;
+grant execute on function public.crm2_permanent_delete_lead(uuid, text) to authenticated;
+grant execute on function public.crm2_transition_shipment(uuid, text, text, text) to authenticated;
+grant execute on function public.crm2_inventory_move(text, uuid, text, integer, text, text, uuid) to authenticated;

@@ -1,2 +1,2 @@
-const SUPABASE_URL='https://envziigrxkmwmamswduv.supabase.co';const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVudnppaWdyeGttd21hbXN3ZHV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcxMjk3MDMsImV4cCI6MjEwMjcwNTcwM30.gkKugJKCHJnO92ghKCQAHoq7CZkiDVL_QzNBf8mtVw8';
-if(location.pathname.includes('/crm2/')){const s=document.createElement('script');s.src='./lead-upload-fix.js?v=12';document.head.appendChild(s);const r=document.createElement('script');r.src='./routing-fix.js?v=1';document.head.appendChild(r);}
+/* CRM2 public configuration. This key is intentionally publishable; no service-role secret belongs in the browser. */
+window.CRM2_CONFIG={supabaseUrl:'https://ukpfmlhkvwgoqrrgdump.supabase.co',supabaseKey:'sb_publishable_zqG3MpIMAfAdCwD3sGQT-A_xj5_5N28'};

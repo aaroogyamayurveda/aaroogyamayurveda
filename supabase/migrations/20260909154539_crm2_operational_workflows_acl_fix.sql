@@ -1,0 +1,4 @@
+revoke execute on function public.crm2_record_inventory_movement(text,uuid,text,integer,text,text,uuid) from anon,public; grant execute on function public.crm2_record_inventory_movement(text,uuid,text,integer,text,text,uuid) to authenticated;
+revoke execute on function public.crm2_record_cod_remittance(uuid,numeric,text,text,text) from anon,public; grant execute on function public.crm2_record_cod_remittance(uuid,numeric,text,text,text) to authenticated;
+revoke execute on function public.crm2_record_settlement(text,uuid,numeric,text,text) from anon,public; grant execute on function public.crm2_record_settlement(text,uuid,numeric,text,text) to authenticated;
+revoke execute on function public.crm2_record_refund(uuid,numeric,text,text) from anon,public; grant execute on function public.crm2_record_refund(uuid,numeric,text,text) to authenticated;
