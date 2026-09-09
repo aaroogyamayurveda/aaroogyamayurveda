@@ -19,7 +19,7 @@ ok('shipment event schema is mapped correctly',workflow.includes('event_status:s
 ok('NDR/RTO schema fields are mapped correctly',workflow.includes('attempt_no:1')&&workflow.includes('inspection_status:remarks')&&workflow.includes('restocked:false'));
 ok('order item is created with fast order',workflow.includes("from('order_items')")&&workflow.includes('line_total:total'));
 ok('finance RPC adapters exist',finance.includes('crm2_record_cod_remittance')&&finance.includes('crm2_record_settlement')&&finance.includes('crm2_record_refund')&&finance.includes('crm2_record_inventory_movement'));
-ok('delivery UI exposes NDR/RTO actions',ops.includes('data-ship')&&ops.includes("data-ndr")&&ops.includes("data-rto")&&ops.includes('createNdrCase')&&ops.includes('createRtoCase'));
+ok('delivery UI exposes NDR/RTO actions',ops.includes('data-ship')&&ops.includes('value="ndr"')&&ops.includes('value="rto"')&&ops.includes('createNdrCase')&&ops.includes('createRtoCase'));
 ok('accounts UI exposes finance workflows',ops.includes('recordCodRemittance')&&ops.includes('recordSettlement')&&ops.includes('recordRefund')&&ops.includes('recordPayment'));
 ok('inventory UI exposes stock movement workflow',ops.includes('recordInventoryMovement')&&ops.includes('inventory_movements'));
 ok('payments UI uses schema-correct type',app.includes("select('order_id,amount,type,status,reference,created_at')")&&app.includes('x.type'));
