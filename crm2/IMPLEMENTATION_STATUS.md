@@ -28,6 +28,8 @@
 - MIS summary and order-status distribution
 - CSV/XLSX import: local parse → preview → column mapping → validation/duplicate check → staged import rows → lead import
 - Audit log visibility for manager roles
+- **Admin/configuration workspace:** existing user role/team/active management, teams, dispositions, campaigns, products, warehouses and couriers
+- **Lead assignment workspace:** manager assignment/reassignment to active agents/team leaders with lead-assignment history
 
 ## Operational backend hardening completed
 - Fast-order workflow now reuses an existing customer by mobile before creating a new customer.
@@ -50,8 +52,9 @@
 - Google Drive is not part of CRM2 scope.
 
 ## Remaining build track
-- Complete manager/admin configuration screens (users, teams, dispositions, campaigns, products, warehouses, couriers).
-- Add richer drill-down reports, assignment/reassignment controls and customer/order operational actions.
+- Harden frontend role-specific navigation across every workspace and add finer-grained action controls.
+- Add richer drill-down reports, customer/order operational actions and broader bulk assignment/filtering.
+- Add complete audit writes for critical configuration and assignment changes.
 - Optimize RLS policies using cached auth expressions and consolidate duplicate permissive policies where safe.
 - Improve import staging with reusable mapping templates, row-level downloadable error reporting and more efficient large-file duplicate checks.
 - Add server-side adapter endpoints for VICIdial/couriers only when the relevant credentials/infrastructure are intentionally provisioned.
