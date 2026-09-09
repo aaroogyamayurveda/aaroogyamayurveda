@@ -60,5 +60,5 @@ const auditName='20260909200000_crm2_audit_dealer_targets.sql';
 const auditCandidates=[path.join(repoRoot,'supabase','migrations',auditName),path.join(process.cwd(),'supabase','migrations',auditName)];
 const auditMigration=auditCandidates.find(p=>fs.existsSync(p));
 const auditSql=auditMigration?fs.readFileSync(auditMigration,'utf8').toLowerCase():'';
-ok('dealer and target changes are covered by database audit triggers',admin.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&!!auditMigration&&auditSql.includes('create trigger crm2_audit_dealer_change')&&auditSql.includes('on public.dealers')&&auditSql.includes('create trigger crm2_audit_agent_target_change')&&auditSql.includes('on public.agent_targets'));
+ok('dealer and target changes are covered by database audit triggers',dealer.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&!!auditMigration&&auditSql.includes('create trigger crm2_audit_dealer_change')&&auditSql.includes('on public.dealers')&&auditSql.includes('create trigger crm2_audit_agent_target_change')&&auditSql.includes('on public.agent_targets'));
 console.log('CRM2 static smoke suite passed');
