@@ -9,6 +9,7 @@ ok('index loads operational UI module',index.includes('src="./modules/operations
 ok('index loads admin UI module',index.includes('src="./modules/admin-ui.js"'));
 ok('index loads management UI module',index.includes('src="./modules/management-ui.js"'));
 ok('index loads import quality module',index.includes('src="./modules/import-ui.js"'));
+ok('index loads workflow UI module',index.includes('src="./modules/workflow-ui.js"'));
 ok('index does not load duplicate Supabase client',!index.includes('supabase-js'));
 ok('no legacy/fix JS',!index.includes('path-fix.js')&&!index.includes('routing-fix.js')&&!index.includes('lead-upload-fix.js'));
 ok('manual mobile calling is first-class',app.includes('tel:')&&data.includes('manual_mobile'));
@@ -39,6 +40,8 @@ ok('mapping template saves actual mapping',imports.includes('window.crm2ImportMa
 ok('role-aware core navigation hides restricted pages',admin.includes('RESTRICTED_PAGES')&&admin.includes('applyRoleNavigation'));
 ok('fast order UI supports mobile customer matching',ops.includes('createOrderFromLead')&&ops.includes('Customer Mobile')&&ops.includes('normalizeMobile')&&ops.includes('data-fast-order'));
 ok('fast order uses product selector',ops.includes('getProducts')&&ops.includes('productId'));
+ok('follow-up UI provides due/overdue/missed/reschedule workflow',index.includes('workflow-ui.js'));
+ok('verification UI exposes history and decisions',index.includes('workflow-ui.js'));
 ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role')&&!admin.includes('service_role')&&!management.includes('service_role')&&!imports.includes('service_role'));
 ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/')&&!admin.includes('../crm/')&&!admin.includes('../crm1/')&&!management.includes('../crm/')&&!management.includes('../crm1/')&&!imports.includes('../crm/')&&!imports.includes('../crm1/'));
 ok('no Google Drive dependency',![app,data,workflow,finance,ops,admin,management,imports].some(x=>x.includes('Google Drive')));
