@@ -37,6 +37,8 @@ ok('same-file duplicate detection exists',imports.includes('duplicateMobile')&&i
 ok('import quality panel is wired to real errors',imports.includes('window.crm2ImportErrors')&&imports.includes('downloadErrorReport(window.crm2ImportErrors'));
 ok('mapping template saves actual mapping',imports.includes('window.crm2ImportMapping')&&imports.includes('saveMappingTemplate(name,window.crm2ImportMapping)'));
 ok('role-aware core navigation hides restricted pages',admin.includes('RESTRICTED_PAGES')&&admin.includes('applyRoleNavigation'));
+ok('fast order UI supports mobile customer matching',ops.includes('createOrderFromLead')&&ops.includes('Customer Mobile')&&ops.includes('normalizeMobile')&&ops.includes('data-fast-order'));
+ok('fast order uses product selector',ops.includes('getProducts')&&ops.includes('productId'));
 ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role')&&!admin.includes('service_role')&&!management.includes('service_role')&&!imports.includes('service_role'));
 ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/')&&!admin.includes('../crm/')&&!admin.includes('../crm1/')&&!management.includes('../crm/')&&!management.includes('../crm1/')&&!imports.includes('../crm/')&&!imports.includes('../crm1/'));
 ok('no Google Drive dependency',![app,data,workflow,finance,ops,admin,management,imports].some(x=>x.includes('Google Drive')));
