@@ -1,0 +1,1 @@
+CRM2 current production files: index.html, app.js, styles.css, config.js, README.md, tests/smoke.js, tests/README.md. Legacy CRM2 runtime files must not be loaded by index.html.
