@@ -2,11 +2,13 @@
 const fs=require('fs'),path=require('path');
 const dir=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),config=read('config.js');
+const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),config=read('config.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
 ok('index loads current app module',index.includes('src="./app.js"'));
 ok('index loads operational UI module',index.includes('src="./modules/operations-ui.js"'));
 ok('index loads admin UI module',index.includes('src="./modules/admin-ui.js"'));
+ok('index loads management UI module',index.includes('src="./modules/management-ui.js"'));
+ok('index loads import quality module',index.includes('src="./modules/import-ui.js"'));
 ok('index does not load duplicate Supabase client',!index.includes('supabase-js'));
 ok('no legacy/fix JS',!index.includes('path-fix.js')&&!index.includes('routing-fix.js')&&!index.includes('lead-upload-fix.js'));
 ok('manual mobile calling is first-class',app.includes('tel:')&&data.includes('manual_mobile'));
@@ -27,12 +29,12 @@ ok('payments UI uses schema-correct type',app.includes("select('order_id,amount,
 ok('admin module provides role-aware navigation',admin.includes('currentProfile')&&admin.includes('ROLES')&&admin.includes('Admin / Config'));
 ok('admin module owns configuration entities',admin.includes('disposition_levels')&&admin.includes('campaigns')&&admin.includes('products')&&admin.includes('warehouses')&&admin.includes('couriers'));
 ok('assignment workflow is exposed',admin.includes('lead_assignments')&&admin.includes('assigned_to')&&admin.includes('agent_id'));
-ok('bulk assignment and lead filters exist',admin.includes('Bulk Assign')&&admin.includes('data-bulk-lead')&&admin.includes('searchAssign')&&admin.includes('selectedLeadIds'));
-ok('MIS drilldown reporting exists',admin.includes('MIS Drilldown')&&admin.includes('agent_id')&&admin.includes('campaign_id')&&admin.includes('conversion'));
-ok('import mapping templates and row error export exist',app.includes('mapping template')&&app.includes('Download Error Report')&&app.includes('import_rows'));
-ok('same-file duplicate detection exists',app.includes('duplicateMobile')&&app.includes('seenMobiles'));
-ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role')&&!admin.includes('service_role'));
-ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/')&&!admin.includes('../crm/')&&!admin.includes('../crm1/'));
-ok('no Google Drive dependency',!app.includes('Google Drive')&&!data.includes('Google Drive')&&!workflow.includes('Google Drive')&&!finance.includes('Google Drive')&&!ops.includes('Google Drive')&&!admin.includes('Google Drive'));
+ok('bulk assignment and lead filters exist',management.includes('Bulk Assign')&&management.includes('data-bulk-lead')&&management.includes('assignQ')&&management.includes('assignment_date'));
+ok('MIS drilldown reporting exists',management.includes('MIS Drilldown')&&management.includes('agent_id')&&management.includes('campaign_id')&&management.includes('conversion'));
+ok('import mapping templates and row error export exist',imports.includes('mapping template')&&imports.includes('Download Error Report')&&imports.includes('import_rows'));
+ok('same-file duplicate detection exists',imports.includes('duplicateMobile')&&imports.includes('seenMobiles'));
+ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role')&&!admin.includes('service_role')&&!management.includes('service_role')&&!imports.includes('service_role'));
+ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/')&&!admin.includes('../crm/')&&!admin.includes('../crm1/')&&!management.includes('../crm/')&&!management.includes('../crm1/')&&!imports.includes('../crm/')&&!imports.includes('../crm1/'));
+ok('no Google Drive dependency',![app,data,workflow,finance,ops,admin,management,imports].some(x=>x.includes('Google Drive')));
 for(const f of fs.readdirSync(dir,{recursive:true}))if(typeof f==='string'&&/^.+-(v\d+|final|fix)\.js$/i.test(f))throw new Error('Legacy/versioned CRM2 JS remains: '+f);
 console.log('CRM2 static smoke suite passed');
