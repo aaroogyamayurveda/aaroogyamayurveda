@@ -31,8 +31,12 @@ ok('admin module owns configuration entities',admin.includes('disposition_levels
 ok('assignment workflow is exposed',admin.includes('lead_assignments')&&admin.includes('assigned_to')&&admin.includes('agent_id'));
 ok('bulk assignment and lead filters exist',management.includes('Bulk Assign')&&management.includes('data-bulk-lead')&&management.includes('assignQ')&&management.includes('assignment_date'));
 ok('MIS drilldown reporting exists',management.includes('MIS Drilldown')&&management.includes('agent_id')&&management.includes('campaign_id')&&management.includes('conversion'));
+ok('management pages are mounted from navigation',admin.includes('mountManagement')&&admin.includes('data-admin="mis"')&&admin.includes('data-admin="assignments"'));
 ok('import mapping templates and row error export exist',imports.includes('mapping template')&&imports.includes('Download Error Report')&&imports.includes('import_rows'));
 ok('same-file duplicate detection exists',imports.includes('duplicateMobile')&&imports.includes('seenMobiles'));
+ok('import quality panel is wired to real errors',imports.includes('window.crm2ImportErrors')&&imports.includes('downloadErrorReport(window.crm2ImportErrors'));
+ok('mapping template saves actual mapping',imports.includes('window.crm2ImportMapping')&&imports.includes('saveMappingTemplate(name,window.crm2ImportMapping)'));
+ok('role-aware core navigation hides restricted pages',admin.includes('RESTRICTED_PAGES')&&admin.includes('applyRoleNavigation'));
 ok('no service role secret',!config.includes('service_role')&&!app.includes('service_role')&&!data.includes('service_role')&&!workflow.includes('service_role')&&!finance.includes('service_role')&&!ops.includes('service_role')&&!admin.includes('service_role')&&!management.includes('service_role')&&!imports.includes('service_role'));
 ok('no CRM1 navigation dependency',!app.includes('../crm/')&&!app.includes('../crm1/')&&!ops.includes('../crm/')&&!ops.includes('../crm1/')&&!admin.includes('../crm/')&&!admin.includes('../crm1/')&&!management.includes('../crm/')&&!management.includes('../crm1/')&&!imports.includes('../crm/')&&!imports.includes('../crm1/'));
 ok('no Google Drive dependency',![app,data,workflow,finance,ops,admin,management,imports].some(x=>x.includes('Google Drive')));
