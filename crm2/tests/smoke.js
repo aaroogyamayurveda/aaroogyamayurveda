@@ -67,7 +67,7 @@ ok('create order uses atomic CRM2 RPC',createOrder.includes('crm2_create_order_w
 ok('create order supports pincode auto-fill with fallback',createOrder.includes('api.postalpincode.in/pincode')&&createOrder.includes('Pincode lookup unavailable'));
 ok('create order preserves attribution',createOrder.includes('campaign_id')&&createOrder.includes('source')&&createOrder.includes('priority'));
 ok('create order supports manual and telephony call paths',createOrder.includes('tel:')&&createOrder.includes('crm2StartTelephonyCall'));
-ok('Fast Order action is routed to the unified workspace',createOrderBridge.includes('Fast Order')&&createOrderBridge.includes('crm2OpenCreateOrder')&&createOrderBridge.includes('stopImmediatePropagation')&&createOrderBridge.includes('capture'));
+ok('Fast Order action is routed to the unified workspace',createOrderBridge.includes('Fast Order')&&createOrderBridge.includes('crm2OpenCreateOrder')&&createOrderBridge.includes('stopImmediatePropagation')&&createOrderBridge.includes("addEventListener('click'"));
 ok('resilient pincode cascade keeps manual fallback',createOrderAddress.includes('Pincode lookup unavailable')&&createOrderAddress.includes('Select State'));
 const auditName='20260909200000_crm2_audit_dealer_targets.sql';
 const auditCandidates=[path.join(repoRoot,'supabase','migrations',auditName),path.join(process.cwd(),'supabase','migrations',auditName)];
