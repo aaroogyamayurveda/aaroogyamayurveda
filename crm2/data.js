@@ -3,7 +3,7 @@ const C=window.CRM2_CONFIG||{};
 export const sb=createClient(C.supabaseUrl,C.supabaseKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 export const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 export const fmtDate=v=>v?new Date(v).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'}):'—';
-export const money=v=>`₹${Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:2})`;
+export const money=v=>`₹${Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:2})}`;
 export function normalizeMobile(v){return String(v??'').replace(/\D/g,'').slice(-10)}
 export function parseCsv(text){const rows=[];let row=[],cell='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(c==='"'&&quoted&&n==='"'){cell+='"';i++;continue}if(c==='"'){quoted=!quoted;continue}if(c===','&&!quoted){row.push(cell);cell='';continue}if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&n==='\n')i++;row.push(cell);if(row.some(x=>x.trim()!==''))rows.push(row);row=[];cell='';continue}cell+=c}if(cell!==''||row.length){row.push(cell);rows.push(row)}return rows}
 export async function currentProfile(){const {data:{user}}=await sb.auth.getUser();if(!user){document.documentElement.removeAttribute('data-crm2-role');return null}const {data,error}=await sb.from('crm2_user_profiles').select('id,full_name,role,team_id,active').eq('id',user.id).maybeSingle();if(error||!data||!data.active){document.documentElement.removeAttribute('data-crm2-role');return null}document.documentElement.dataset.crm2Role=data.role;return {...user,...data}}
