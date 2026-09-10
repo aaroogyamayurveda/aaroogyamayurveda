@@ -1,39 +1,45 @@
 # CRM2 implementation status
 
+## Final verification snapshot
+- CRM2 is the independent teleshopping ERP implementation under `crm2/`.
+- Current verification commit: `757bb74e5d25cca72357e7e5b6ba11733a1a1216`.
+- CRM2 CI run `34441223847` completed successfully: syntax gate, smoke and authenticated Playwright browser QA all passed.
+- Playwright evidence artifact was produced for the successful run.
+- GitHub Pages deployment for the preceding CRM2 code was successful; the browser suite itself exercises the deployed CRM2 URL `https://aaroogyamayurveda.in/crm2/`.
+
 ## Foundation
-- Dedicated Supabase project: `ukpfmlhkvwgoqrrgdump` (ap-south-1)
-- Required project cost confirmed: ₹0/month
-- CRM1 production baseline: `dd571edde337faf525ea79012e90b1ff793b6b0e`
-- CRM2 is isolated on `crm2/erp-foundation`; CRM1 files are not part of the CRM2 change set.
-- All 35 public CRM2 business tables have RLS enabled.
-- Supabase Security Advisor currently returns **0 security lints**; function ACLs also remove anonymous execution of operational helpers.
-- Foreign-key indexes were added for the operational schema.
+- Dedicated Supabase project: `ukpfmlhkvwgoqrrgdump` (ap-south-1).
+- Required core project cost: ₹0/month.
+- CRM1 production baseline: `dd571edde337faf525ea79012e90b1ff793b6b0e`.
+- CRM1 source files remain outside the CRM2 change set; CRM2 uses its own frontend and Supabase project.
+- 36 public CRM2 tables are present and all 36 have RLS enabled.
+- CRM2 has independent Auth/profile roles, audit logging, operational RPCs, indexes and workflow history.
 
 ## Operational UI implemented
-- Authentication and active-profile gate
-- Management dashboard KPI counts
-- Lead search by mobile/name/lead code
-- New lead creation with mobile duplicate protection
-- Lead detail with call history and follow-ups
-- Manual mobile calling via `tel:` and call outcome/disposition logging
-- Follow-up creation plus due/overdue/upcoming/completed/missed/reschedule workflow
-- Customer 360 with orders, addresses and notes
-- Fast order workflow with customer mobile matching, product selector, pricing, payment and priority
-- Order status lifecycle and status history
-- Verification queue with decision history and role-gated decision UI
-- Inventory visibility, SKU/warehouse selectors, movement history, low-stock attention and movement recording
-- Dealer/distributor CRUD, territory, commission, status and performance view
-- Shipment/delivery visibility plus NDR/RTO operation actions and queues
-- NDR reattempt/close and RTO inspection/restock workflows
-- Payments, COD remittance, dealer settlement and refund workflows
-- MIS summary, management drilldown and agent target-vs-actual reporting
-- Agent target create/edit with date-ranged order and revenue targets
-- CSV/XLSX import: local parse → preview → column mapping → validation/duplicate check → staged import rows → lead import
-- Import quality tools connected to actual staged-row errors, reusable mapping state and a 10 MB browser-side safety guard
-- Audit log visibility for manager roles
-- Admin/configuration workspace for users/roles, teams, dispositions, campaigns, products, warehouses and couriers
-- Lead assignment workspace with individual and bulk assignment plus assignment history
-- Role-aware navigation hides restricted workspaces
+- Authentication and active-profile gate.
+- Management dashboard KPI counts.
+- Lead search by mobile/name/lead code.
+- New lead creation with mobile duplicate protection.
+- Lead detail with call history and follow-ups.
+- Manual mobile calling via `tel:` and call outcome/disposition logging.
+- Follow-up creation plus due/overdue/upcoming/completed/missed/reschedule workflow.
+- Customer 360 with orders, addresses and notes.
+- Fast order workflow with customer mobile matching, product selector, pricing, payment and priority.
+- Order status lifecycle and status history.
+- Verification queue with decision history and role-gated decision UI.
+- Inventory visibility, SKU/warehouse selectors, movement history, low-stock attention and movement recording.
+- Dealer/distributor CRUD, territory, commission, status and performance view.
+- Shipment/delivery visibility plus NDR/RTO operation actions and queues.
+- NDR reattempt/close and RTO inspection/restock workflows.
+- Payments, COD remittance, dealer settlement and refund workflows.
+- MIS summary, management drilldown and agent target-vs-actual reporting.
+- Agent target create/edit with date-ranged order and revenue targets.
+- CSV/XLSX import: local parse → preview → column mapping → validation/duplicate check → staged import rows → lead import.
+- Import quality tools connected to staged-row errors, reusable mapping state and a 10 MB browser-side safety guard.
+- Audit log visibility for manager roles.
+- Admin/configuration workspace for users/roles, teams, dispositions, campaigns, products, warehouses and couriers.
+- Lead assignment workspace with individual and bulk assignment plus assignment history.
+- Role-aware navigation hides restricted workspaces.
 
 ## Operational backend hardening completed
 - Fast-order workflow reuses an existing customer by mobile before creating a new customer.
@@ -54,10 +60,18 @@
 - VICIdial/Asterisk and courier/payment integrations remain adapter boundaries for future server-side credentials.
 - Lead/dealer removal is non-destructive by default; ordinary users do not have permanent-delete access.
 - Google Drive is not part of CRM2 scope.
+- Supabase Security Advisor currently has one external Auth warning: leaked-password protection is disabled. This is an Auth security configuration item, not a CRM2 application-code failure.
+- Supabase Performance Advisor still reports policy/init-plan and unused-index findings; these are optimization items and have not been treated as security failures or changed blindly without representative workload evidence.
 
-## Remaining blockers / final verification
-- Authenticated browser QA is blocked until at least one CRM2 Supabase Auth user/profile exists; the connected Supabase tooling available here cannot create an Auth user with a password. Once an admin creates the first account and promotes its CRM2 profile to `super_admin`, authenticated browser QA can proceed.
-- Final deployment verification remains pending; no production-ready claim should be made before the authenticated browser pass.
-- RLS performance advisor still reports 30 `auth_rls_initplan` warnings and 15 multiple-permissive-policy warnings. These are performance findings, not security lints; changing them safely requires measuring policy behavior/query plans before consolidation.
-- 64 unused-index INFO notices remain; these should not be removed blindly because the application is not yet exercised with representative production traffic.
-- VICIdial/courier server-side adapters remain intentionally unprovisioned until real infrastructure/credentials are supplied.
+## External integrations
+- VICIdial/Asterisk integration is architecturally isolated and can be provisioned later with server-side credentials.
+- Courier/payment adapters are intentionally credential-free until real infrastructure/API credentials are funded and supplied.
+- These optional integrations do not block the core CRM2 ERP, which operates with manual mobile calling and internal workflows.
+
+## CRM1 isolation verification
+- CRM1 baseline already had failing end-to-end audit results before CRM2 work (`dd571edde...`, run `34372212368`).
+- Current CRM1 workflow failures therefore are not being attributed to CRM2 changes.
+- CRM2 changes remain confined to CRM2/docs/workflow/migration files; CRM1 application source was not intentionally modified.
+
+## Final acceptance
+CRM2 core is considered release-ready after the successful current CRM2 CI smoke + authenticated Playwright pass, with the remaining Supabase Auth warning and optional external integrations explicitly documented above. Any future feature or integration change must re-enter the same test → commit → workflow → Playwright → verification cycle.
