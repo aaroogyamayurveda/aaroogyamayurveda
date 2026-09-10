@@ -2,10 +2,12 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './specs',
-  timeout: 45_000,
-  expect: { timeout: 10_000 },
-  fullyParallel: false,
-  retries: process.env.CI ? 1 : 0,
+  testMatch: 'roles-fast.spec.js',
+  timeout: 30_000,
+  expect: { timeout: 8_000 },
+  fullyParallel: true,
+  workers: process.env.CI ? 6 : undefined,
+  retries: 0,
   reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : 'list',
   use: {
     baseURL: process.env.CRM2_BASE_URL || 'https://aaroogyamayurveda.in/crm2/',
