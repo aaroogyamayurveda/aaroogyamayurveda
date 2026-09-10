@@ -2,10 +2,12 @@
 
 ## Final verification snapshot
 - CRM2 is the independent teleshopping ERP implementation under `crm2/`.
-- Current verification commit: `757bb74e5d25cca72357e7e5b6ba11733a1a1216`.
+- Current repository HEAD: `4946b7303e1bd0a98e2bee4eca1d8f18d3d52b46` (documentation-only update after the verified application commit).
+- Last application verification commit: `757bb74e5d25cca72357e7e5b6ba11733a1a1216`.
 - CRM2 CI run `34441223847` completed successfully: syntax gate, smoke and authenticated Playwright browser QA all passed.
-- Playwright evidence artifact was produced for the successful run.
-- GitHub Pages deployment for the preceding CRM2 code was successful; the browser suite itself exercises the deployed CRM2 URL `https://aaroogyamayurveda.in/crm2/`.
+- A subsequent documentation-only HEAD commit triggered CRM2 CI run `34441461832`, which also completed successfully: syntax gate, smoke and authenticated Playwright browser QA all passed.
+- Playwright evidence artifact was produced for the successful runs.
+- GitHub Pages deployment run `34441461790` completed successfully; the browser suite exercises the deployed CRM2 URL `https://aaroogyamayurveda.in/crm2/`.
 
 ## Foundation
 - Dedicated Supabase project: `ukpfmlhkvwgoqrrgdump` (ap-south-1).
