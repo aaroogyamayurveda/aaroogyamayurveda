@@ -83,6 +83,15 @@ test('agent: management-only navigation is hidden', async ({ page }) => {
   }
 });
 
+test('agent: all restricted operational navigation and management controls are hidden', async ({ page }) => {
+  const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
+  test.skip(!c, 'Missing agent secrets');
+  await login(page, c.email, c.password);
+  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config', 'Lead Assignment', 'MIS Drilldown']) {
+    await expect(page.getByRole('button', { name: label, exact: true })).toBeHidden();
+  }
+});
+
 test('authenticated session survives navigation and direct page selection', async ({ page }) => {
   const c = credentials('CRM2_MANAGER_EMAIL', 'CRM2_MANAGER_PASSWORD');
   test.skip(!c, 'Missing manager secrets');
