@@ -10,7 +10,7 @@ const RESTRICTED_PAGES={
  reports:['super_admin','admin','manager','assistant_manager','team_leader','qa','mis','management_readonly'],
  targets:['super_admin','admin','manager','assistant_manager','team_leader'],
  imports:['super_admin','admin','manager','assistant_manager','team_leader','mis'],
- audit:['super_admin','admin','manager','assistant_manager','qa','mis','management_readonly']
+ audit:['super_admin','admin','manager','assistant_manager','team_leader','qa','mis','management_readonly']
 };
 const CONFIGS={
  teams:{title:'Teams',table:'crm2_teams',fields:[['name','Name','text'],['manager_id','Manager ID','text'],['active','Active','check']]},
@@ -23,7 +23,7 @@ const CONFIGS={
 let me;
 const $=id=>document.getElementById(id),msg=t=>{const x=$('adminMsg');if(x)x.textContent=t};
 const table=(h,r)=>`<div class="tablewrap"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${r.length?r.join(''):`<tr><td colspan="${h.length}" class="muted">No records found.</td></tr>`}</tbody></table></div>`;
-const field=(f)=>{const [k,l,t]=f;return `<div class="field"><label>${esc(l)}</label>${t==='check'?`<input id="af_${k}" type="checkbox" checked>`:`<input id="af_${k}" type="${t==='number'?'number':'text'}">`}</div>`};
+const field=(f)=>{const [k,l,t]=f;return `<div class="field"><label>${esc(l)}</label>${t==='check'?`<input id="af_${k}" type="checkbox" checked>`:`<input id="af_${k}" type="${t==='number'?'number':'text'}">`};
 const activateNav=id=>document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===id));
 export function applyRoleNavigation(profile=me){if(!profile)return;document.querySelectorAll('[data-page]').forEach(b=>{const allowed=RESTRICTED_PAGES[b.dataset.page];const hide=!!allowed&&!allowed.includes(profile.role);b.hidden=hide;b.style.display=hide?'none':''});const side=document.querySelector('.side');if(!side)return;['management_assignments','management_mis'].forEach(id=>{const old=side.querySelector(`[data-page="${id}"]`);if(old)old.remove()});if(ROLES.includes(profile.role)){for(const [id,label,mode] of [['management_assignments','Lead Assignment','assignments'],['management_mis','MIS Drilldown','mis']]){const b=document.createElement('button');b.dataset.page=id;b.textContent=label;b.onclick=()=>{activateNav(id);mountManagement(document.querySelector('#main'),mode)};side.appendChild(b)}}}
 function addAdminNav(side,p){if(side.querySelector('[data-page="admin"]')||!ROLES.includes(p.role))return;const b=document.createElement('button');b.dataset.page='admin';b.textContent='Admin / Config';b.onclick=()=>{activateNav('admin');mountAdmin(document.querySelector('#main'))};side.appendChild(b)}
