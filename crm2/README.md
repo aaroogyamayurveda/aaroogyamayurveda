@@ -2,6 +2,9 @@
 
 CRM2 is the isolated next-generation teleshopping business ERP. It uses the dedicated Supabase project configured in `config.js` and is independent of CRM1.
 
+## Verification status
+The CRM2 core has passed the automated syntax gate, smoke suite and authenticated Playwright role/browser suite in GitHub Actions. Future CRM2 changes must repeat the same test → commit → workflow → Playwright verification cycle before release.
+
 ## Zero-cost core
 The core uses static hosting, browser APIs, Supabase Free-tier database/auth/RLS, and the Supabase JS CDN. Paid dialers, courier APIs, WhatsApp/SMS, ads and accounting integrations are optional adapters only.
 
