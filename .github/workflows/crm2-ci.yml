@@ -19,8 +19,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Syntax check CRM2 admin module
-        run: node --check crm2/modules/admin-ui.js
+      - name: Syntax check CRM2 UI modules
+        run: |
+          node --check crm2/modules/admin-ui.js
+          node --check crm2/ui-modern.js
       - run: node crm2/tests/smoke.js
 
   browser:
