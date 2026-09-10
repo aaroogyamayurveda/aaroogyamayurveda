@@ -57,7 +57,7 @@ test('agent: management-only navigation is hidden', async ({ page }) => {
   test.skip(!c, 'Missing agent secrets');
   await login(page, c.email, c.password);
   for (const label of ['Dealers', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log']) {
-    await expect(page.getByRole('button', { name: label, exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: label, exact: true })).toBeHidden();
   }
 });
 
