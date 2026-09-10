@@ -11,14 +11,18 @@ function activate(id){document.querySelectorAll('[data-page]').forEach(x=>x.clas
 async function openPage(mode){
   const main=document.querySelector('#main');
   if(!main)return;
-  if(mode==='admin'){
-    const {mountAdmin}=await import('./admin-ui.js');
-    activate('admin');
-    await mountAdmin(main);
-  }else{
-    const {mountManagement}=await import('./management-ui.js');
-    activate(`management_${mode}`);
-    await mountManagement(main,mode);
+  try{
+    if(mode==='admin'){
+      const {mountAdminRuntime}=await import('./admin-runtime.js');
+      await mountAdminRuntime(main);
+    }else{
+      const {mountManagement}=await import('./management-ui.js');
+      activate(`management_${mode}`);
+      await mountManagement(main,mode);
+    }
+  }catch(error){
+    console.error('CRM2 navigation error',error);
+    main.innerHTML=`<section class="panel error">${String(error?.message||'Unable to open workspace.')}</section>`;
   }
 }
 function addButtons(side,role){
@@ -41,7 +45,7 @@ async function sync(){
     const profile=await currentProfile();
     role=profile?.role||'';
   }
-  addButtons(document.querySelector('.side'),role);
+  addButtons(side,role);
 }
 new MutationObserver(()=>sync()).observe(document.body,{childList:true,subtree:true});
 sync();
