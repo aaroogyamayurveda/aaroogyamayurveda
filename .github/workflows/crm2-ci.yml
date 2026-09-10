@@ -22,6 +22,7 @@ jobs:
       - name: Syntax check CRM2 UI modules
         run: |
           node --check crm2/modules/admin-ui.js
+          node --check crm2/modules/create-order-ui.js
           node --check crm2/ui-modern.js
       - run: node crm2/tests/smoke.js
 

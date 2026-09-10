@@ -169,3 +169,48 @@ test('agent: responsive ERP workspace has no horizontal overflow', async ({ page
   await page.getByRole('button', { name: 'Logout', exact: true }).click();
   await expect(page.locator('#email')).toBeVisible({ timeout: 5_000 });
 });
+
+test('agent: create order workspace is available from Orders and Calling', async ({ page }) => {
+  const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
+  test.skip(!c.email || !c.password, 'Missing agent secrets');
+  await login(page, c.email, c.password);
+  await sideButton(page, 'Orders').click();
+  await expect(page.getByRole('button', { name: /Create Order|Fast Order/i }).first()).toBeVisible({ timeout: 8_000 });
+  const createAction = page.getByRole('button', { name: /Create Order|Fast Order/i }).first();
+  await createAction.click();
+  await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
+  for (const label of ['Customer Name', 'Mobile Number', 'Pincode', 'State', 'City', 'Area / Post', 'Complete Delivery Address', 'Product', 'Quantity', 'Payment Mode']) await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 5_000 });
+  await sideButton(page, 'Calling').click();
+  await expect(page.getByRole('button', { name: /Create Order/i }).first()).toBeVisible({ timeout: 8_000 });
+});
+
+test('agent: create order workspace exposes CRM1-equivalent address and call controls', async ({ page }) => {
+  const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
+  test.skip(!c.email || !c.password, 'Missing agent secrets');
+  await login(page, c.email, c.password);
+  await sideButton(page, 'Orders').click();
+  const createAction = page.getByRole('button', { name: /Create Order|Fast Order/i }).first();
+  await createAction.click();
+  await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator('#crm2OrderMobile')).toHaveAttribute('inputmode', 'numeric');
+  await expect(page.locator('#crm2OrderPincode')).toHaveAttribute('inputmode', 'numeric');
+  await expect(page.getByRole('button', { name: /Call Mobile/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Create Order/i }).last()).toBeVisible();
+  await expect(page.locator('#crm2OrderState')).toBeVisible();
+  await expect(page.locator('#crm2OrderCity')).toBeVisible();
+  await expect(page.locator('#crm2OrderPost')).toBeVisible();
+});
+
+test('agent: create order workspace has no horizontal overflow on desktop and mobile', async ({ page }) => {
+  const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
+  test.skip(!c.email || !c.password, 'Missing agent secrets');
+  await login(page, c.email, c.password);
+  await sideButton(page, 'Orders').click();
+  await page.getByRole('button', { name: /Create Order|Fast Order/i }).first().click();
+  await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
+  for (const width of [390, 768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    expect(overflow, `create-order horizontal overflow at ${width}px`).toBe(false);
+  }
+});
