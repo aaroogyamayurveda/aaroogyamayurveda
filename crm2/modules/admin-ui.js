@@ -7,6 +7,8 @@ const RESTRICTED_PAGES={
  dealers:['super_admin','admin','manager','assistant_manager','team_leader','dealer_manager'],
  delivery:['super_admin','admin','manager','assistant_manager','team_leader','warehouse','dispatch','dealer_manager','verification'],
  accounts:['super_admin','admin','manager','assistant_manager','accounts'],
+ reports:['super_admin','admin','manager','assistant_manager','team_leader','qa','mis','management_readonly'],
+ targets:['super_admin','admin','manager','assistant_manager','team_leader'],
  imports:['super_admin','admin','manager','assistant_manager','team_leader','mis'],
  audit:['super_admin','admin','manager','assistant_manager','qa','mis','management_readonly']
 };
