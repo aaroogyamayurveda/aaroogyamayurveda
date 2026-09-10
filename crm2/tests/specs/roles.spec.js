@@ -56,12 +56,13 @@ test('super_admin: management nav opens quickly and marks the selected workspace
   const c = credentials('CRM2_SUPERADMIN_EMAIL', 'CRM2_SUPERADMIN_PASSWORD');
   test.skip(!c, 'Missing super-admin secrets');
   await login(page, c.email, c.password);
-  const admin = page.getByRole('button', { name: 'Admin / Config', exact: true });
+  const side = page.locator('.side');
+  const admin = side.getByRole('button', { name: 'Admin / Config', exact: true });
   await expect(admin).toBeVisible();
   await admin.click();
   await expect(page.getByRole('heading', { name: 'Admin & Configuration', exact: true })).toBeVisible({ timeout: 3000 });
-  const mis = page.getByRole('button', { name: 'MIS Drilldown', exact: true });
-  const assignment = page.getByRole('button', { name: 'Lead Assignment', exact: true });
+  const mis = side.getByRole('button', { name: 'MIS Drilldown', exact: true });
+  const assignment = side.getByRole('button', { name: 'Lead Assignment', exact: true });
   await expect(mis).toBeVisible();
   await expect(assignment).toBeVisible();
   await mis.click();
