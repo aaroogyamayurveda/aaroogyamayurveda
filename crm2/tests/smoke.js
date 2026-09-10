@@ -11,6 +11,7 @@ ok('index loads admin UI module',index.includes('src="./modules/admin-ui.js"'));
 ok('index loads management UI module',index.includes('src="./modules/management-ui.js"'));
 ok('index loads import quality module',index.includes('src="./modules/import-ui.js"'));
 ok('index loads workflow UI module',index.includes('src="./modules/workflow-ui.js"'));
+ok('role/navigation modules are cache-busted',/admin-ui\.js\?v=\d+/.test(index)&&/management-ui\.js\?v=\d+/.test(index));
 ok('index does not load duplicate Supabase client',!index.includes('supabase-js'));
 ok('no legacy/fix JS',!index.includes('path-fix.js')&&!index.includes('routing-fix.js')&&!index.includes('lead-upload-fix.js'));
 ok('manual mobile calling is first-class',app.includes('tel:')&&data.includes('manual_mobile'));
