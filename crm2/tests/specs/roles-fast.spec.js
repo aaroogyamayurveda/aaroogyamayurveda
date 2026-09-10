@@ -17,6 +17,7 @@ const roleCases = [
 ];
 
 const credentials = (emailKey, passwordKey) => ({ email: process.env[emailKey], password: process.env[passwordKey] });
+const sideButton = (page, label) => page.locator('.side').getByRole('button', { name: label, exact: true });
 
 async function login(page, email, password) {
   await page.goto(process.env.CRM2_BASE_URL, { waitUntil: 'domcontentloaded', timeout: 15_000 });
@@ -31,7 +32,7 @@ for (const [role, emailKey, passwordKey] of roleCases) {
     const c = credentials(emailKey, passwordKey);
     test.skip(!c.email || !c.password, `Missing ${role} secrets`);
     await login(page, c.email, c.password);
-    await expect(page.getByText(new RegExp(`\\b${role}\\b`, 'i'))).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('.user')).toContainText(role, { timeout: 5_000 });
     await page.getByRole('button', { name: 'Logout', exact: true }).click();
     await expect(page.locator('#email')).toBeVisible({ timeout: 5_000 });
   });
@@ -41,36 +42,36 @@ test('super_admin: full navigation is available', async ({ page }) => {
   const c = credentials('CRM2_SUPERADMIN_EMAIL', 'CRM2_SUPERADMIN_PASSWORD');
   test.skip(!c.email || !c.password, 'Missing super-admin secrets');
   await login(page, c.email, c.password);
-  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config']) await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible({ timeout: 5_000 });
+  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config']) await expect(sideButton(page, label)).toBeVisible({ timeout: 5_000 });
 });
 
 test('super_admin: management workspaces open and activate', async ({ page }) => {
   const c = credentials('CRM2_SUPERADMIN_EMAIL', 'CRM2_SUPERADMIN_PASSWORD');
   test.skip(!c.email || !c.password, 'Missing super-admin secrets');
   await login(page, c.email, c.password);
-  await page.getByRole('button', { name: 'Admin / Config', exact: true }).click();
+  await sideButton(page, 'Admin / Config').click();
   await expect(page.getByRole('heading', { name: 'Admin & Configuration', exact: true })).toBeVisible({ timeout: 8_000 });
-  await page.getByRole('button', { name: 'Lead Assignment', exact: true }).click();
+  await sideButton(page, 'Lead Assignment').click();
   await expect(page.getByRole('heading', { name: 'Lead Assignment', exact: true })).toBeVisible({ timeout: 8_000 });
-  await expect(page.getByRole('button', { name: 'Lead Assignment', exact: true })).toHaveClass(/active/);
-  await page.getByRole('button', { name: 'MIS Drilldown', exact: true }).click();
+  await expect(sideButton(page, 'Lead Assignment')).toHaveClass(/active/);
+  await sideButton(page, 'MIS Drilldown').click();
   await expect(page.getByRole('heading', { name: 'MIS Drilldown', exact: true })).toBeVisible({ timeout: 8_000 });
-  await expect(page.getByRole('button', { name: 'MIS Drilldown', exact: true })).toHaveClass(/active/);
+  await expect(sideButton(page, 'MIS Drilldown')).toHaveClass(/active/);
 });
 
 test('manager: operational and management navigation is visible', async ({ page }) => {
   const c = credentials('CRM2_MANAGER_EMAIL', 'CRM2_MANAGER_PASSWORD');
   test.skip(!c.email || !c.password, 'Missing manager secrets');
   await login(page, c.email, c.password);
-  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config', 'Lead Assignment', 'MIS Drilldown']) await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible({ timeout: 5_000 });
+  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config', 'Lead Assignment', 'MIS Drilldown']) await expect(sideButton(page, label)).toBeVisible({ timeout: 5_000 });
 });
 
 test('team_leader: restricted finance navigation stays hidden', async ({ page }) => {
   const c = credentials('CRM2_TEAMLEADER_EMAIL', 'CRM2_TEAMLEADER_PASSWORD');
   test.skip(!c.email || !c.password, 'Missing team-leader secrets');
   await login(page, c.email, c.password);
-  await expect(page.getByRole('button', { name: 'Accounts', exact: true })).toBeHidden();
-  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config', 'Lead Assignment', 'MIS Drilldown']) await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible({ timeout: 5_000 });
+  await expect(sideButton(page, 'Accounts')).toBeHidden();
+  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config', 'Lead Assignment', 'MIS Drilldown']) await expect(sideButton(page, label)).toBeVisible({ timeout: 5_000 });
 });
 
 const specialistCases = [
@@ -85,10 +86,10 @@ const specialistCases = [
 for (const [role, emailKey, passwordKey, visible, hidden] of specialistCases) {
   test(`${role}: specialist navigation scope`, async ({ page }) => {
     const c = credentials(emailKey, passwordKey);
-    test.skip(!c.email || !c.password, `Missing secrets for ${emailKey}`);
+    test.skip(!c.email || !c.password, `Missing ${role} secrets`);
     await login(page, c.email, c.password);
-    for (const label of visible) await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible({ timeout: 5_000 });
-    for (const label of hidden) await expect(page.getByRole('button', { name: label, exact: true })).toBeHidden();
+    for (const label of visible) await expect(sideButton(page, label)).toBeVisible({ timeout: 5_000 });
+    for (const label of hidden) await expect(sideButton(page, label)).toBeHidden();
   });
 }
 
@@ -96,7 +97,7 @@ test('agent: management and restricted operational navigation is hidden', async 
   const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
   test.skip(!c.email || !c.password, 'Missing agent secrets');
   await login(page, c.email, c.password);
-  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config', 'Lead Assignment', 'MIS Drilldown']) await expect(page.getByRole('button', { name: label, exact: true })).toBeHidden();
+  for (const label of ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config', 'Lead Assignment', 'MIS Drilldown']) await expect(sideButton(page, label)).toBeHidden();
 });
 
 test('agent: restricted navigation is hidden during normal navigation renders', async ({ page }) => {
@@ -105,8 +106,8 @@ test('agent: restricted navigation is hidden during normal navigation renders', 
   await login(page, c.email, c.password);
   const restricted = ['Inventory', 'Dealers', 'Delivery / NDR / RTO', 'Accounts', 'MIS & Analytics', 'Agent Targets', 'Import Leads', 'Audit Log', 'Admin / Config', 'Lead Assignment', 'MIS Drilldown'];
   for (const pageLabel of ['Dashboard', 'Leads', 'Customers', 'Calling', 'Follow-ups', 'Orders', 'Verification']) {
-    await page.getByRole('button', { name: pageLabel, exact: true }).click();
-    for (const label of restricted) await expect(page.getByRole('button', { name: label, exact: true })).toBeHidden();
+    await sideButton(page, pageLabel).click();
+    for (const label of restricted) await expect(sideButton(page, label)).toBeHidden();
   }
 });
 
@@ -114,8 +115,10 @@ test('authenticated session survives reload and direct page selection', async ({
   const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
   test.skip(!c.email || !c.password, 'Missing agent secrets');
   await login(page, c.email, c.password);
-  await page.getByRole('button', { name: 'Leads', exact: true }).click();
+  await sideButton(page, 'Leads').click();
+  await expect(page.getByRole('heading', { name: 'Leads', exact: true })).toBeVisible({ timeout: 10_000 });
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'Logout', exact: true })).toBeVisible({ timeout: 10_000 });
+  await sideButton(page, 'Leads').click();
   await expect(page.getByRole('heading', { name: 'Leads', exact: true })).toBeVisible({ timeout: 10_000 });
 });
