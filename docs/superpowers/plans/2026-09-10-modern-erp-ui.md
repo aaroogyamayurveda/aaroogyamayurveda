@@ -45,8 +45,10 @@
 
 ### Task 5: Full verification and refinement
 **Files:** existing CRM2 files only as needed.
-- [ ] Run smoke and Playwright QA on the deployed build.
-- [ ] Fix any UI regression, selector, role, or runtime issue at root cause.
-- [ ] Verify desktop/tablet/mobile layout and absence of horizontal overflow.
-- [ ] Verify CRM1 source isolation against the accepted CRM1 baseline.
-- [ ] Verify final deployment and browser evidence.
+- [x] Run smoke and Playwright QA on the deployed build.
+- [x] Fix UI runtime and action-preservation regressions at root cause.
+- [x] Verify desktop/tablet/mobile layout and absence of horizontal overflow with Playwright at 390/768/1024 widths.
+- [x] Verify CRM1 source isolation against the accepted CRM1 baseline.
+- [x] Verify final GitHub Pages deployment and Playwright evidence artifact.
+
+**Final verification:** CRM2 CI run 34513335935 — smoke PASS, browser PASS, 28/28 browser tests PASS; deployment job reported success for the deployed commit. CRM1 source isolation remains preserved against the accepted CRM1 baseline.
