@@ -155,3 +155,17 @@ test('super_admin: leads workspace has modern header, filters and action hierarc
   await expect(page.locator('.filter-bar')).toBeVisible();
   await expect(page.getByRole('button', { name: 'New Lead', exact: true })).toBeVisible();
 });
+
+test('agent: responsive ERP workspace has no horizontal overflow', async ({ page }) => {
+  const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
+  test.skip(!c.email || !c.password, 'Missing agent secrets');
+  for (const width of [390, 768, 1024]) {
+    await page.setViewportSize({ width, height: 900 });
+    await login(page, c.email, c.password);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    expect(overflow, `horizontal overflow at ${width}px`).toBe(false);
+    await expect(page.locator('.main')).toHaveCSS('align-self', 'start');
+    await page.getByRole('button', { name: 'Logout', exact: true }).click();
+    await expect(page.locator('#email')).toBeVisible({ timeout: 5_000 });
+  }
+});
