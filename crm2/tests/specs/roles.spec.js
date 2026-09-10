@@ -92,6 +92,19 @@ test('agent: all restricted operational navigation and management controls are h
   }
 });
 
+test('agent: restricted navigation is already hidden during each normal navigation render', async ({ page }) => {
+  const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
+  test.skip(!c, 'Missing agent secrets');
+  await login(page, c.email, c.password);
+  for (const pageId of ['dashboard', 'leads', 'customers', 'calling', 'followups', 'orders', 'verification']) {
+    await page.locator(`[data-page="${pageId}"]`).click();
+    const state = await page.locator('.side').evaluate((side) => [...side.querySelectorAll('[data-page]')].map((b) => ({ page: b.dataset.page, hidden: b.hidden, display: getComputedStyle(b).display })));
+    for (const item of state.filter((x) => ['inventory', 'dealers', 'delivery', 'accounts', 'reports', 'targets', 'imports', 'audit'].includes(x.page))) {
+      expect(item.hidden || item.display === 'none', `${item.page} must be hidden immediately after ${pageId} navigation`).toBeTruthy();
+    }
+  }
+});
+
 test('authenticated session survives navigation and direct page selection', async ({ page }) => {
   const c = credentials('CRM2_MANAGER_EMAIL', 'CRM2_MANAGER_PASSWORD');
   test.skip(!c, 'Missing manager secrets');
