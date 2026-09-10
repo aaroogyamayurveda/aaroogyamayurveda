@@ -2,12 +2,11 @@
 
 ## Final verification snapshot
 - CRM2 is the independent teleshopping ERP implementation under `crm2/`.
-- Current repository HEAD: `4946b7303e1bd0a98e2bee4eca1d8f18d3d52b46` (documentation-only update after the verified application commit).
-- Last application verification commit: `757bb74e5d25cca72357e7e5b6ba11733a1a1216`.
-- CRM2 CI run `34441223847` completed successfully: syntax gate, smoke and authenticated Playwright browser QA all passed.
-- A subsequent documentation-only HEAD commit triggered CRM2 CI run `34441461832`, which also completed successfully: syntax gate, smoke and authenticated Playwright browser QA all passed.
-- Playwright evidence artifact was produced for the successful runs.
-- GitHub Pages deployment run `34441461790` completed successfully; the browser suite exercises the deployed CRM2 URL `https://aaroogyamayurveda.in/crm2/`.
+- Current repository HEAD: `e407663057950057f6bfc95a6757c64884e886f9`.
+- Last application verification commit: `e407663057950057f6bfc95a6757c64884e886f9` (README/documentation-only change after the verified application code).
+- CRM2 CI run `34441692388` completed successfully: syntax gate, smoke and authenticated Playwright browser QA all passed.
+- Playwright evidence artifact was produced for the successful run.
+- GitHub Pages deployment run `34441692413` completed successfully.
 
 ## Foundation
 - Dedicated Supabase project: `ukpfmlhkvwgoqrrgdump` (ap-south-1).
@@ -76,4 +75,4 @@
 - CRM2 changes remain confined to CRM2/docs/workflow/migration files; CRM1 application source was not intentionally modified.
 
 ## Final acceptance
-CRM2 core is considered release-ready after the successful current CRM2 CI smoke + authenticated Playwright pass, with the remaining Supabase Auth warning and optional external integrations explicitly documented above. Any future feature or integration change must re-enter the same test → commit → workflow → Playwright → verification cycle.
+CRM2 core is release-ready after the successful current CRM2 CI smoke + authenticated Playwright pass and successful Pages deployment, with the remaining Supabase Auth warning and optional external integrations explicitly documented above. Any future feature or integration change must re-enter the same test → commit → workflow → Playwright → verification cycle.
