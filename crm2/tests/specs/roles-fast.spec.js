@@ -122,3 +122,36 @@ test('authenticated session survives reload and direct page selection', async ({
   await sideButton(page, 'Leads').click();
   await expect(page.getByRole('heading', { name: 'Leads', exact: true })).toBeVisible({ timeout: 10_000 });
 });
+
+test('super_admin: ERP dashboard uses top-aligned modern workspace primitives', async ({ page }) => {
+  const c = credentials('CRM2_SUPERADMIN_EMAIL', 'CRM2_SUPERADMIN_PASSWORD');
+  test.skip(!c.email || !c.password, 'Missing super-admin secrets');
+  await login(page, c.email, c.password);
+  await expect(page.locator('.main')).toHaveClass(/erp-workspace/);
+  await expect(page.locator('.page-header')).toBeVisible();
+  await expect(page.locator('.kpi-grid')).toBeVisible();
+  await expect(page.locator('.analytics-grid')).toBeVisible();
+  await expect(page.locator('.business-funnel')).toBeVisible();
+  await expect(page.locator('.quick-actions')).toBeVisible();
+  await expect(page.locator('.main')).toHaveCSS('align-self', 'start');
+});
+
+test('super_admin: dashboard renders visual analytics containers without fake records', async ({ page }) => {
+  const c = credentials('CRM2_SUPERADMIN_EMAIL', 'CRM2_SUPERADMIN_PASSWORD');
+  test.skip(!c.email || !c.password, 'Missing super-admin secrets');
+  await login(page, c.email, c.password);
+  await expect(page.locator('[data-chart="sales-trend"]')).toBeVisible();
+  await expect(page.locator('[data-chart="order-status"]')).toBeVisible();
+  await expect(page.locator('[data-chart="agent-performance"]')).toBeVisible();
+});
+
+test('super_admin: leads workspace has modern header, filters and action hierarchy', async ({ page }) => {
+  const c = credentials('CRM2_SUPERADMIN_EMAIL', 'CRM2_SUPERADMIN_PASSWORD');
+  test.skip(!c.email || !c.password, 'Missing super-admin secrets');
+  await login(page, c.email, c.password);
+  await sideButton(page, 'Leads').click();
+  await expect(page.locator('.main')).toHaveClass(/erp-workspace/);
+  await expect(page.locator('.page-header')).toBeVisible();
+  await expect(page.locator('.filter-bar')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'New Lead', exact: true })).toBeVisible();
+});
