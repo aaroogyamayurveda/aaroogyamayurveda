@@ -3,7 +3,7 @@ const fs=require('fs'),path=require('path');
 const dir=path.resolve(__dirname,'..');
 const repoRoot=path.resolve(__dirname,'../..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),dealer=read('modules/dealer-ui.js'),targets=read('modules/targets-ui.js'),config=read('config.js'),navRole=read('modules/nav-role-ui.js'),createOrder=read('modules/create-order-ui.js'),createOrderBridge=read('modules/create-order-bridge.js');
+const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),dealer=read('modules/dealer-ui.js'),targets=read('modules/targets-ui.js'),config=read('config.js'),navRole=read('modules/nav-role-ui.js'),createOrder=read('modules/create-order-ui.js'),createOrderBridge=read('modules/create-order-bridge.js'),createOrderAddress=read('modules/create-order-address.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
 ok('index loads current app module',/src="\.\/app\.js\?v=/.test(index));
 ok('index loads operational UI module',/src="\.\/modules\/operations-ui\.js\?v=/.test(index));
@@ -14,6 +14,7 @@ ok('index loads workflow UI module',/src="\.\/modules\/workflow-ui\.js\?v=/.test
 ok('index loads independent role navigation module',/src="\.\/modules\/nav-role-ui\.js\?v=\d+-\d+/.test(index));
 ok('index loads create order workspace module',/src="\.\/modules\/create-order-ui\.js\?v=\d+-\d+/.test(index));
 ok('index loads create order bridge module',/src="\.\/modules\/create-order-bridge\.js\?v=\d+-\d+/.test(index));
+ok('index loads create order address module',/src="\.\/modules\/create-order-address\.js\?v=\d+-\d+/.test(index));
 ok('role/navigation modules use a cache-bust version',/admin-ui\.js\?v=\d+-\d+/.test(index)&&/management-ui\.js\?v=\d+-\d+/.test(index)&&/app\.js\?v=\d+-\d+/.test(index));
 ok('role navigation renderer exposes management labels',navRole.includes('Admin / Config')&&navRole.includes('Lead Assignment')&&navRole.includes('MIS Drilldown'));
 ok('index does not load duplicate Supabase client',!index.includes('supabase-js'));
@@ -48,9 +49,9 @@ ok('fast order UI supports mobile customer matching',ops.includes('createOrderFr
 ok('fast order uses product selector',ops.includes('getProducts')&&ops.includes('productId'));
 ok('follow-up UI provides due/overdue/missed/reschedule workflow',index.includes('workflow-ui.js'));
 ok('verification UI exposes history and decisions',index.includes('workflow-ui.js'));
-ok('no service role secret',![config,app,data,workflow,finance,ops,admin,management,imports,createOrder,createOrderBridge].some(x=>x.includes('service_role')));
-ok('no CRM1 navigation dependency',![app,workflow,finance,ops,admin,management,imports,createOrder,createOrderBridge].some(x=>x.includes('../crm/'))&&! [app,workflow,finance,ops,admin,management,imports,createOrder,createOrderBridge].some(x=>x.includes('../crm1/')));
-ok('no Google Drive dependency',![app,data,workflow,finance,ops,admin,management,imports,createOrder,createOrderBridge].some(x=>x.includes('Google Drive')));
+ok('no service role secret',![config,app,data,workflow,finance,ops,admin,management,imports,createOrder,createOrderBridge,createOrderAddress].some(x=>x.includes('service_role')));
+ok('no CRM1 navigation dependency',![app,workflow,finance,ops,admin,management,imports,createOrder,createOrderBridge,createOrderAddress].some(x=>x.includes('../crm/'))&&! [app,workflow,finance,ops,admin,management,imports,createOrder,createOrderBridge,createOrderAddress].some(x=>x.includes('../crm1/')));
+ok('no Google Drive dependency',![app,data,workflow,finance,ops,admin,management,imports,createOrder,createOrderBridge,createOrderAddress].some(x=>x.includes('Google Drive')));
 for(const f of fs.readdirSync(dir,{recursive:true}))if(typeof f==='string'&&/^.+-(v\d+|final|fix)\.js$/i.test(f))throw new Error('Legacy/versioned CRM2 JS remains: '+f);
 ok('NDR lifecycle actions are implemented',workflow.includes('reattemptNdrCase')&&workflow.includes('closeNdrCase')&&ops.includes('reattempt_ndr')&&ops.includes('close_ndr'));
 ok('RTO inspection and restock are implemented',workflow.includes('inspectRtoCase')&&workflow.includes('restockRtoCase')&&ops.includes('inspect_rto')&&ops.includes('restock_rto')&&ops.includes('recordInventoryMovement'));
@@ -67,12 +68,13 @@ ok('create order supports pincode auto-fill with fallback',createOrder.includes(
 ok('create order preserves attribution',createOrder.includes('campaign_id')&&createOrder.includes('source')&&createOrder.includes('priority'));
 ok('create order supports manual and telephony call paths',createOrder.includes('tel:')&&createOrder.includes('crm2StartTelephonyCall'));
 ok('Fast Order action is routed to the unified workspace',createOrderBridge.includes('Fast Order')&&createOrderBridge.includes('crm2OpenCreateOrder')&&createOrderBridge.includes("replacement.textContent='Create Order'"));
+ok('resilient pincode cascade keeps manual fallback',createOrderAddress.includes('Pincode lookup unavailable')&&createOrderAddress.includes('Select State'));
 const auditName='20260909200000_crm2_audit_dealer_targets.sql';
 const auditCandidates=[path.join(repoRoot,'supabase','migrations',auditName),path.join(process.cwd(),'supabase','migrations',auditName)];
 const auditMigration=auditCandidates.find(p=>fs.existsSync(p));
 const auditSql=auditMigration?fs.readFileSync(auditMigration,'utf8').toLowerCase():'';
 ok('dealer and target changes are covered by database audit triggers',dealer.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&!!auditMigration&&auditSql.includes('create trigger crm2_audit_dealer_change')&&auditSql.includes('on public.dealers')&&auditSql.includes('create trigger crm2_audit_agent_target_change')&&auditSql.includes('on public.agent_targets'));
-const orderMigration=path.join(repoRoot,'supabase','migrations','20260911000900_crm2_create_order_workspace.sql');
+const orderMigration=path.join(repoRoot,'supabase','migrations','20260910184343_crm2_create_order_workspace.sql');
 const orderSql=fs.existsSync(orderMigration)?fs.readFileSync(orderMigration,'utf8').toLowerCase():'';
 ok('create order database migration is present and locked to authenticated users',!!orderSql&&orderSql.includes('crm2_create_order_workspace')&&orderSql.includes('security invoker')&&orderSql.includes('revoke all on function')&&orderSql.includes('grant execute on function'));
 console.log('CRM2 static smoke suite passed');
