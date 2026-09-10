@@ -94,3 +94,5 @@ jobs:
             crm2/tests/test-results/
             crm2/tests/playwright-report/
           if-no-files-found: ignore
+
+# CRM2 verification trigger: keep browser QA tied to the current main deployment.
