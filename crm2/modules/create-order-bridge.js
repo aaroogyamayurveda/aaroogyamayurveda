@@ -3,13 +3,20 @@ const wire=()=>{
   document.querySelectorAll('button').forEach(btn=>{
     if(btn.dataset.crm2CreateOrderBridge==='true')return;
     if(!/^Fast Order$/i.test((btn.textContent||'').trim()))return;
-    const replacement=btn.cloneNode(true);
-    replacement.textContent='Create Order';
-    replacement.dataset.crm2CreateOrderBridge='true';
-    replacement.onclick=()=>window.crm2OpenCreateOrder();
-    btn.replaceWith(replacement);
+    btn.dataset.crm2CreateOrderBridge='true';
   });
 };
+
+document.addEventListener('click',event=>{
+  const btn=event.target?.closest?.('button');
+  if(!btn||typeof window.crm2OpenCreateOrder!=='function')return;
+  const label=(btn.textContent||'').trim();
+  if(!/^Fast Order$/i.test(label)&&btn.dataset.crm2CreateOrderAction!=='true')return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  window.crm2OpenCreateOrder();
+},true);
+
 new MutationObserver(wire).observe(document.body,{subtree:true,childList:true});
 window.addEventListener('crm2CreateOrderUIReady',wire);
 wire();
