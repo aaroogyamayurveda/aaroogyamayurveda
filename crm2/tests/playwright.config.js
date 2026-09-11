@@ -5,7 +5,7 @@ export default defineConfig({
   testMatch: 'roles-fast.spec.js',
   timeout: 30_000,
   expect: { timeout: 8_000 },
-  fullyParallel: true,
+  fullyParallel: false,
   workers: process.env.CI ? 6 : undefined,
   retries: 0,
   reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : 'list',
