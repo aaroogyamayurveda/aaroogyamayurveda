@@ -70,6 +70,8 @@ ok('create order call lifecycle has Start/End controls and timer',createOrderCal
 ok('call lifecycle stores start and end timestamps',createOrderCalling.includes('started_at')&&createOrderCalling.includes('ended_at'));
 ok('callback scheduling stores due date/time and assignment',createOrderCalling.includes('due_at')&&createOrderCalling.includes('assigned_to')&&createOrderCalling.includes('Save Callback'));
 ok('callback prevents duplicate active save',createOrderCalling.includes('callbackSaving'));
+ok('active call survives refresh and is agent-scoped',createOrderCalling.includes('localStorage')&&createOrderCalling.includes('crm2ActiveCall')&&createOrderCalling.includes('agentId'));
+ok('abandoned active calls expire with a persisted lifecycle',createOrderCalling.includes('Abandoned')&&createOrderCalling.includes('6*60*60*1000')&&createOrderCalling.includes('ended_at'));
 ok('resilient pincode cascade keeps manual fallback',createOrderAddress.includes('Pincode lookup unavailable')&&createOrderAddress.includes('Select State'));
 const auditName='20260909200000_crm2_audit_dealer_targets.sql';
 const auditCandidates=[path.join(repoRoot,'supabase','migrations',auditName),path.join(process.cwd(),'supabase','migrations',auditName)];
