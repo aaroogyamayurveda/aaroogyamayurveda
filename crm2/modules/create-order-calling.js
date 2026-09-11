@@ -8,6 +8,7 @@ let active=null;
 let tick=null;
 let callbackSaved=false;
 let callbackSaving=false;
+let restoredWorkspace=null;
 
 function fmt(sec){const s=Math.max(0,Math.floor(sec||0));return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
 function ctx(){return window.crm2CreateOrderContext||{}}
@@ -121,9 +122,8 @@ function wire(){
   const workspace=document.querySelector(WS);if(!workspace)return;
   ensureUi();
   const mobileInput=$('crm2OrderMobile');if(mobileInput&&!mobileInput.dataset.callingBound){mobileInput.dataset.callingBound='1';mobileInput.addEventListener('input',()=>{if(!active)setStatus(validMobile(mobile())?'Ready to call':'Enter valid mobile')})}
-  if(!wire.restored){wire.restored=true;restoreActive()}
+  if(restoredWorkspace!==workspace){restoredWorkspace=workspace;restoreActive()}
 }
-wire.restored=false;
 const observer=new MutationObserver(wire);observer.observe(document.body,{subtree:true,childList:true});
 window.addEventListener('beforeunload',()=>{if(active)persistActive()});
 setInterval(abandoned,30000);
