@@ -201,6 +201,24 @@ test('agent: create order workspace exposes CRM1-equivalent address and call con
   await expect(page.locator('#crm2OrderPost')).toBeVisible();
 });
 
+test('agent: persisted active call restores calling controls after refresh', async ({ page }) => {
+  const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
+  test.skip(!c.email || !c.password, 'Missing agent secrets');
+  await login(page, c.email, c.password);
+  await sideButton(page, 'Orders').click();
+  await page.getByRole('button', { name: /Create Order|Fast Order/i }).first().click();
+  await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
+  await page.evaluate(() => localStorage.setItem('crm2ActiveCall', JSON.stringify({ id: '00000000-0000-0000-0000-000000000001', startedAt: new Date(Date.now() - 5000).toISOString(), agentId: null })));
+  await sideButton(page, 'Dashboard').click();
+  await sideButton(page, 'Orders').click();
+  await page.getByRole('button', { name: /Create Order|Fast Order/i }).first().click();
+  await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator('#crm2CallStart')).toBeDisabled();
+  await expect(page.locator('#crm2CallEnd')).toBeEnabled();
+  await expect(page.locator('#crm2CallTimer')).not.toHaveText('00:00');
+  await page.evaluate(() => localStorage.removeItem('crm2ActiveCall'));
+});
+
 test('agent: create order workspace has no horizontal overflow on desktop and mobile', async ({ page }) => {
   const c = credentials('CRM2_AGENT_EMAIL', 'CRM2_AGENT_PASSWORD');
   test.skip(!c.email || !c.password, 'Missing agent secrets');
