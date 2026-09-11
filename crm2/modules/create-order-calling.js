@@ -53,11 +53,26 @@ async function restoreActive(){
   try{saved=JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null')}catch(e){clearPersistedActive();return}
   if(!saved?.id||!saved?.startedAt){clearPersistedActive();return}
   const startedAt=new Date(saved.startedAt);if(Number.isNaN(startedAt.getTime())){clearPersistedActive();return}
-  const user=(await currentProfile())?.id||null;if(!user)return;
-  if(saved.agentId&&saved.agentId!==user){clearPersistedActive();return}
-  active={id:saved.id,startedAt,agentId:user};
-  if(Date.now()-startedAt.getTime()>=ACTIVE_MAX_AGE){await expireActive('Abandoned');return}
+  if(Date.now()-startedAt.getTime()>=ACTIVE_MAX_AGE){
+    active={id:saved.id,startedAt,agentId:saved.agentId||null};
+    await expireActive('Abandoned');
+    return;
+  }
+  // Restore the UI immediately so a refresh never re-enables Start Call while
+  // the asynchronous auth/profile check is still resolving. Real persisted
+  // sessions always carry the authenticated agent id from startCall().
+  active={id:saved.id,startedAt,agentId:saved.agentId||null};
   renderActiveState();
+  try{
+    const user=(await currentProfile())?.id||null;
+    if(!user){active=null;clearPersistedActive();renderActiveState();setStatus('Session expired. Please login again.');return}
+    if(saved.agentId&&saved.agentId!==user){active=null;clearPersistedActive();renderActiveState();return}
+    active.agentId=user;
+    persistActive();
+    renderActiveState();
+  }catch(e){
+    console.warn('CRM2 active-call ownership check failed',e);
+  }
 }
 function ensureUi(){
   if(!$('crm2CallMobile')||$('crm2CallStart'))return;
