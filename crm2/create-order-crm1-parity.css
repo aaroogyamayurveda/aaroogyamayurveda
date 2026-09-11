@@ -21,14 +21,20 @@
 .crm1-parity-customer-grid,.crm1-parity-order-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important}
 .crm1-parity-address-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:0}
 .crm1-parity-address-grid .field.full{grid-column:1/-1}
-.crm1-parity-address-grid .saved-addresses{grid-column:1/-1}
 .crm1-parity-section .field label{display:block;font-size:12px;font-weight:800;color:#164b30;margin-bottom:6px}
 .crm1-parity-section input,.crm1-parity-section select,.crm1-parity-section textarea{width:100%;box-sizing:border-box}
 .crm1-parity-section textarea{min-height:80px}
 .crm1-parity-history{margin-top:10px}
-.crm1-parity-summary{margin-top:0}
+.crm1-remarks-panel .crm1-remarks-host{width:100%}
+.crm1-remarks-panel .crm1-remarks-host .field{margin:0!important}
+.crm1-remarks-panel textarea{min-height:80px}
+.crm1-disposition-panel .crm1-disposition-grid{grid-template-columns:1fr 1fr!important}
+.crm1-disposition-actions{justify-content:flex-end!important;margin-top:10px!important}
+.crm1-disposition-actions .btn{min-width:150px}
+.crm1-callback-host{margin-top:12px;padding-top:10px;border-top:1px solid #edf1ee}
 .erp-order-workspace .order-workspace-grid{display:block!important}
-.erp-order-workspace .order-summary-card{margin-top:0}
+.erp-order-workspace .order-summary-card{display:none!important}
 .erp-order-workspace .order-head-actions{display:flex;align-items:center;gap:8px}
+[data-crm2-hidden-submit="true"]{display:none!important}
 @media(max-width:900px){.crm1-parity-address-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:650px){.crm1-parity-call-grid,.crm1-parity-customer-grid,.crm1-parity-order-grid,.crm1-parity-address-grid{grid-template-columns:1fr!important}.crm1-parity-panel-title{flex-direction:column}.crm1-parity-unconfigured{white-space:normal}.crm1-parity-tele-row{align-items:stretch}.crm1-parity-phone{flex-basis:100%}.crm1-parity-actions .btn{flex:1}}
+@media(max-width:650px){.crm1-parity-call-grid,.crm1-parity-customer-grid,.crm1-parity-order-grid,.crm1-parity-address-grid,.crm1-disposition-panel .crm1-disposition-grid{grid-template-columns:1fr!important}.crm1-parity-panel-title{flex-direction:column}.crm1-parity-unconfigured{white-space:normal}.crm1-parity-tele-row{align-items:stretch}.crm1-parity-phone{flex-basis:100%}.crm1-parity-actions .btn{flex:1}.crm1-disposition-actions{justify-content:stretch!important}.crm1-disposition-actions .btn{width:100%}}
