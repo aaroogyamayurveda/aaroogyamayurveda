@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './specs',
-  testMatch: 'roles-fast.spec.js',
+  testMatch: '*.spec.js',
   timeout: 30_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
