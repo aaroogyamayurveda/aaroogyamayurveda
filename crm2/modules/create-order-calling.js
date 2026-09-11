@@ -7,6 +7,7 @@ const ACTIVE_MAX_AGE=6*60*60*1000;
 let active=null;
 let tick=null;
 let callbackSaved=false;
+let callbackSaving=false;
 
 function fmt(sec){const s=Math.max(0,Math.floor(sec||0));return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`}
 function ctx(){return window.crm2CreateOrderContext||{}}
@@ -82,7 +83,7 @@ async function startCall(){
   const started=new Date();
   const {data,error}=await sb.from('lead_calls').insert({lead_id:lead.id,customer_id:c.customer?.id||lead.customer_id||null,agent_id:user,call_source:'manual_mobile',direction:'outbound',started_at:started.toISOString(),ended_at:null,duration_seconds:0,outcome:null,notes:null}).select().single();
   if(error){setStatus('Unable to start call: '+(error.message||'database error'));return}
-  active={id:data.id,startedAt:started,agentId:user};callbackSaved=false;persistActive();
+  active={id:data.id,startedAt:started,agentId:user};callbackSaved=false;callbackSaving=false;persistActive();
   renderActiveState();
 }
 async function endCall(){
@@ -98,18 +99,22 @@ async function endCall(){
   if(outcome==='Callback')await saveCallback();
 }
 async function saveCallback(){
-  if(callbackSaved)return true;
+  if(callbackSaved||callbackSaving)return callbackSaved;
   const c=ctx(),lead=c.lead;if(!lead?.id)return false;
   const input=$('crm2CallbackAt'),err=$('crm2CallbackError');if(!input)return false;
   if(!input.value){if(err)err.textContent='Callback date & time required hai.';return false}
   const due=new Date(input.value);if(Number.isNaN(due.getTime())||due.getTime()<=Date.now()){if(err)err.textContent='Future callback date & time select karein.';return false}
   const user=(await currentProfile())?.id||null;if(!user){if(err)err.textContent='Session expired. Please login again.';return false}
-  const priority=$('crm2CallbackPriority')?.value||'normal';const reason=String($('crm2CallbackNotes')?.value||$('crm2CallNotes')?.value||'').trim()||'Callback requested';
-  const {error}=await sb.from('followups').insert({lead_id:lead.id,customer_id:c.customer?.id||lead.customer_id||null,order_id:null,assigned_to:user,due_at:due.toISOString(),priority,reason,status:'pending',reminder:true});
-  if(error){if(err)err.textContent=error.message||'Callback save failed.';return false}
-  const {error:leadError}=await sb.from('leads').update({status:'callback',next_followup:due.toISOString(),updated_at:new Date().toISOString()}).eq('id',lead.id);
-  if(leadError){if(err)err.textContent='Callback saved, but lead status could not be updated.';console.warn('Callback lead update failed',leadError);return false}
-  callbackSaved=true;if(err)err.textContent='Callback scheduled successfully.';if($('crm2CallOutcome'))$('crm2CallOutcome').value='Callback';return true;
+  callbackSaving=true;
+  try{
+    const priority=$('crm2CallbackPriority')?.value||'normal';const reason=String($('crm2CallbackNotes')?.value||$('crm2CallNotes')?.value||'').trim()||'Callback requested';
+    const {error}=await sb.from('followups').insert({lead_id:lead.id,customer_id:c.customer?.id||lead.customer_id||null,order_id:null,assigned_to:user,due_at:due.toISOString(),priority,reason,status:'pending',reminder:true});
+    if(error){if(err)err.textContent=error.message||'Callback save failed.';return false}
+    callbackSaved=true;
+    const {error:leadError}=await sb.from('leads').update({status:'callback',next_followup:due.toISOString(),updated_at:new Date().toISOString()}).eq('id',lead.id);
+    if(leadError){if(err)err.textContent='Callback saved, but lead status could not be updated.';console.warn('Callback lead update failed',leadError);return true}
+    if(err)err.textContent='Callback scheduled successfully.';if($('crm2CallOutcome'))$('crm2CallOutcome').value='Callback';return true;
+  }finally{callbackSaving=false}
 }
 function abandoned(){if(!active)return;const age=Date.now()-active.startedAt.getTime();if(age<ACTIVE_MAX_AGE)return;expireActive('Abandoned')}
 function wire(){
