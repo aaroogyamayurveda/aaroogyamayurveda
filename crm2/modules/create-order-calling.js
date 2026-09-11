@@ -2,6 +2,8 @@ import {sb,currentProfile,normalizeMobile} from '../data.js';
 
 const $=id=>document.getElementById(id);
 const WS='[data-crm2-create-order]';
+const ACTIVE_KEY='crm2ActiveCall';
+const ACTIVE_MAX_AGE=6*60*60*1000;
 let active=null;
 let tick=null;
 let callbackSaved=false;
@@ -11,6 +13,50 @@ function ctx(){return window.crm2CreateOrderContext||{}}
 function mobile(){return normalizeMobile($('crm2OrderMobile')?.value||'')}
 function validMobile(v){return /^[6-9]\d{9}$/.test(v)}
 function setStatus(text){if($('crm2CallStatus'))$('crm2CallStatus').textContent=text}
+function clearPersistedActive(){try{localStorage.removeItem(ACTIVE_KEY)}catch(e){}}
+function persistActive(){
+  try{
+    if(!active){clearPersistedActive();return}
+    localStorage.setItem(ACTIVE_KEY,JSON.stringify({id:active.id,startedAt:active.startedAt.toISOString(),agentId:active.agentId||null}))
+  }catch(e){console.warn('CRM2 active call state could not be persisted',e)}
+}
+function stopTimer(){clearInterval(tick);tick=null}
+function startTimer(){
+  stopTimer();
+  if(!active)return;
+  const render=()=>{if($('crm2CallTimer'))$('crm2CallTimer').textContent=fmt((Date.now()-active.startedAt.getTime())/1000)};
+  render();tick=setInterval(render,250);
+}
+function renderActiveState(){
+  const start=$('crm2CallStart'),end=$('crm2CallEnd'),mobileLink=$('crm2CallMobile');
+  if(!start||!end)return;
+  if(active){
+    start.disabled=true;end.disabled=false;start.style.opacity='.55';end.style.opacity='1';mobileLink?.classList.add('muted');setStatus('Calling / In Call');startTimer();
+  }else{
+    start.disabled=false;end.disabled=true;start.style.opacity='1';end.style.opacity='.55';mobileLink?.classList.remove('muted');
+  }
+}
+async function expireActive(reason='Abandoned'){
+  const call=active;if(!call)return;
+  stopTimer();
+  const ended=new Date();const duration=Math.max(0,Math.round((ended.getTime()-call.startedAt.getTime())/1000));
+  const {error}=await sb.from('lead_calls').update({ended_at:ended.toISOString(),duration_seconds:duration,outcome:reason,notes:'Call session expired after refresh/abandonment.'}).eq('id',call.id).is('ended_at',null);
+  if(error){console.warn('CRM2 abandoned call update failed',error);return}
+  active=null;clearPersistedActive();
+  if($('crm2CallTimer'))$('crm2CallTimer').textContent=fmt(duration);
+  renderActiveState();setStatus('Previous call session expired. Ready to call.');
+}
+async function restoreActive(){
+  let saved=null;
+  try{saved=JSON.parse(localStorage.getItem(ACTIVE_KEY)||'null')}catch(e){clearPersistedActive();return}
+  if(!saved?.id||!saved?.startedAt){clearPersistedActive();return}
+  const startedAt=new Date(saved.startedAt);if(Number.isNaN(startedAt.getTime())){clearPersistedActive();return}
+  const user=(await currentProfile())?.id||null;if(!user)return;
+  if(saved.agentId&&saved.agentId!==user){clearPersistedActive();return}
+  active={id:saved.id,startedAt,agentId:user};
+  if(Date.now()-startedAt.getTime()>=ACTIVE_MAX_AGE){await expireActive('Abandoned');return}
+  renderActiveState();
+}
 function ensureUi(){
   if(!$('crm2CallMobile')||$('crm2CallStart'))return;
   const old=$('crm2CallMobile');const host=old.parentElement;
@@ -26,6 +72,7 @@ function ensureUi(){
     outcome.addEventListener('change',()=>{const box=$('crm2CallbackFields');if(box)box.hidden=outcome.value!=='Callback';});
   }
   start.onclick=startCall;end.onclick=endCall;$('crm2SaveCallback')?.addEventListener('click',saveCallback);
+  renderActiveState();
 }
 async function startCall(){
   if(active)return;
@@ -35,19 +82,19 @@ async function startCall(){
   const started=new Date();
   const {data,error}=await sb.from('lead_calls').insert({lead_id:lead.id,customer_id:c.customer?.id||lead.customer_id||null,agent_id:user,call_source:'manual_mobile',direction:'outbound',started_at:started.toISOString(),ended_at:null,duration_seconds:0,outcome:null,notes:null}).select().single();
   if(error){setStatus('Unable to start call: '+(error.message||'database error'));return}
-  active={id:data.id,startedAt:started};callbackSaved=false;
-  $('crm2CallStart').disabled=true;$('crm2CallEnd').disabled=false;$('crm2CallMobile').classList.add('muted');$('crm2CallStart').style.opacity='.55';$('crm2CallEnd').style.opacity='1';
-  setStatus('Calling / In Call');
-  clearInterval(tick);tick=setInterval(()=>{$('crm2CallTimer').textContent=fmt((Date.now()-started.getTime())/1000)},250);
+  active={id:data.id,startedAt:started,agentId:user};callbackSaved=false;persistActive();
+  renderActiveState();
 }
 async function endCall(){
   if(!active)return;
-  const call=active;active=null;clearInterval(tick);tick=null;
+  const call=active;stopTimer();
   const ended=new Date();const duration=Math.max(0,Math.round((ended.getTime()-call.startedAt.getTime())/1000));
   const outcome=$('crm2CallOutcome')?.value||null;const notes=String($('crm2CallNotes')?.value||'').trim()||null;
-  const {error}=await sb.from('lead_calls').update({ended_at:ended.toISOString(),duration_seconds:duration,outcome,notes}).eq('id',call.id);
-  $('crm2CallTimer').textContent=fmt(duration);$('crm2CallStart').disabled=false;$('crm2CallEnd').disabled=true;$('crm2CallStart').style.opacity='1';$('crm2CallEnd').style.opacity='.55';setStatus(error?'Call ended locally; log update failed.':'Call completed');
-  if(error){console.warn('CRM2 call end update failed',error);return}
+  setStatus('Saving call…');
+  const {error}=await sb.from('lead_calls').update({ended_at:ended.toISOString(),duration_seconds:duration,outcome,notes}).eq('id',call.id).is('ended_at',null);
+  if(error){setStatus('Call ended locally; log update failed.');active=call;persistActive();renderActiveState();console.warn('CRM2 call end update failed',error);return}
+  active=null;clearPersistedActive();
+  $('crm2CallTimer').textContent=fmt(duration);$('crm2CallStart').disabled=false;$('crm2CallEnd').disabled=true;$('crm2CallStart').style.opacity='1';$('crm2CallEnd').style.opacity='.55';setStatus('Call completed');
   if(outcome==='Callback')await saveCallback();
 }
 async function saveCallback(){
@@ -64,13 +111,15 @@ async function saveCallback(){
   if(leadError){if(err)err.textContent='Callback saved, but lead status could not be updated.';console.warn('Callback lead update failed',leadError);return false}
   callbackSaved=true;if(err)err.textContent='Callback scheduled successfully.';if($('crm2CallOutcome'))$('crm2CallOutcome').value='Callback';return true;
 }
-function abandoned(){if(!active)return;const age=Date.now()-active.startedAt.getTime();if(age<6*60*60*1000)return;clearInterval(tick);tick=null;active=null;setStatus('Previous call session expired. Ready to call.')}
+function abandoned(){if(!active)return;const age=Date.now()-active.startedAt.getTime();if(age<ACTIVE_MAX_AGE)return;expireActive('Abandoned')}
 function wire(){
   const workspace=document.querySelector(WS);if(!workspace)return;
   ensureUi();
   const mobileInput=$('crm2OrderMobile');if(mobileInput&&!mobileInput.dataset.callingBound){mobileInput.dataset.callingBound='1';mobileInput.addEventListener('input',()=>{if(!active)setStatus(validMobile(mobile())?'Ready to call':'Enter valid mobile')})}
+  if(!wire.restored){wire.restored=true;restoreActive()}
 }
+wire.restored=false;
 const observer=new MutationObserver(wire);observer.observe(document.body,{subtree:true,childList:true});
-window.addEventListener('beforeunload',abandoned);
+window.addEventListener('beforeunload',()=>{if(active)persistActive()});
 setInterval(abandoned,30000);
 wire();
