@@ -20,7 +20,7 @@ ok('index does not load duplicate Supabase client',!index.includes('supabase-js'
 ok('no legacy/fix JS',!index.includes('legacy')&&!index.includes('fix.js'));
 ok('manual mobile calling is first-class',createOrder.includes('tel:'));
 ok('working lead status is used',workflow.includes("status:'callback'")||workflow.includes('status = callback')||createOrderCalling.includes("status:'callback'"));
-ok('call logging stores disposition',workflow.includes('disposition')||createOrder.includes('disposition'));
+ok('call logging stores disposition',data.includes('disposition_id')||workflow.includes('disposition')||createOrder.includes('disposition'));
 ok('CRM2 tables are wired',data.includes("from('leads'")&&data.includes("from('customers'"));
 ok('import workflow exists',imports.includes('staged_import_rows'));
 ok('customer 360 exists',app.includes('customer360')||index.includes('customers'));
