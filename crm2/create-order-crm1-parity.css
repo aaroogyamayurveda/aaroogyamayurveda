@@ -9,7 +9,9 @@
 .crm1-parity-field>label{font-size:12px;font-weight:800;color:#164b30;margin-bottom:6px}
 .crm1-parity-field input,.crm1-parity-readonly{width:100%;min-height:42px;padding:11px 12px;border:1px solid #dfe7e1;border-radius:10px;background:#fff;box-sizing:border-box}
 .crm1-parity-readonly{color:#18241d}
-.crm1-parity-actions{justify-content:flex-start!important;margin-top:14px!important}
+.crm1-parity-actions{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:10px!important;margin-top:14px!important;flex-wrap:wrap!important}
+.crm1-parity-actions .call-timer{min-width:72px;text-align:center;font-weight:800;font-variant-numeric:tabular-nums;font-size:16px;padding:10px 12px;border:1px solid #dfe7e1;border-radius:10px;background:#f7faf8}
+.crm1-parity-actions button{min-height:42px}
 .crm1-parity-end{color:#b43b35!important;border-color:#b43b35!important;background:#fff!important}
 .crm1-parity-telephony{padding-top:14px!important;padding-bottom:14px!important}
 .crm1-parity-unconfigured{font-size:12px;font-weight:800;color:#b43b35;white-space:nowrap}
@@ -32,9 +34,12 @@
 .crm1-disposition-actions{justify-content:flex-end!important;margin-top:10px!important}
 .crm1-disposition-actions .btn{min-width:150px}
 .crm1-callback-host{margin-top:12px;padding-top:10px;border-top:1px solid #edf1ee}
+.crm2-validation-error,.field-error.crm2-validation-error{display:block!important;color:#d32f2f!important;font-size:12px!important;font-weight:700!important;margin-top:5px!important;line-height:1.35!important}
+.crm2-inline-error{color:#d32f2f!important}
+#crm2LoginValidation{color:#d32f2f!important}
 .erp-order-workspace .order-workspace-grid{display:block!important}
 .erp-order-workspace .order-summary-card{display:none!important}
 .erp-order-workspace .order-head-actions{display:flex;align-items:center;gap:8px}
 [data-crm2-hidden-submit="true"]{display:none!important}
 @media(max-width:900px){.crm1-parity-address-grid{grid-template-columns:1fr 1fr}}
-@media(max-width:650px){.crm1-parity-call-grid,.crm1-parity-customer-grid,.crm1-parity-order-grid,.crm1-parity-address-grid,.crm1-disposition-panel .crm1-disposition-grid{grid-template-columns:1fr!important}.crm1-parity-panel-title{flex-direction:column}.crm1-parity-unconfigured{white-space:normal}.crm1-parity-tele-row{align-items:stretch}.crm1-parity-phone{flex-basis:100%}.crm1-parity-actions .btn{flex:1}.crm1-disposition-actions{justify-content:stretch!important}.crm1-disposition-actions .btn{width:100%}}
+@media(max-width:650px){.crm1-parity-call-grid,.crm1-parity-customer-grid,.crm1-parity-order-grid,.crm1-parity-address-grid,.crm1-disposition-panel .crm1-disposition-grid{grid-template-columns:1fr!important}.crm1-parity-panel-title{flex-direction:column}.crm1-parity-unconfigured{white-space:normal}.crm1-parity-tele-row{align-items:stretch}.crm1-parity-phone{flex-basis:100%}.crm1-parity-actions{align-items:stretch!important}.crm1-parity-actions .btn{flex:1}.crm1-disposition-actions{justify-content:stretch!important}.crm1-disposition-actions .btn{width:100%}}
