@@ -6,7 +6,6 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 8_000 },
   fullyParallel: false,
-  workers: process.env.CI ? 6 : undefined,
   retries: 0,
   reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : 'list',
   use: {
@@ -17,4 +16,18 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
   outputDir: 'test-results',
+  projects: [
+    {
+      name: 'roles',
+      grepInvert: /^(agent:|authenticated session survives reload)/,
+      fullyParallel: true,
+      workers: process.env.CI ? 6 : undefined,
+    },
+    {
+      name: 'agent-workflows',
+      grep: /^(agent:|authenticated session survives reload)/,
+      fullyParallel: false,
+      workers: 1,
+    },
+  ],
 });
