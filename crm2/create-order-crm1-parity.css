@@ -1,0 +1,34 @@
+/* CRM1 Create Order visual parity layer. CRM2 data/workflow logic remains unchanged. */
+.crm1-parity-console,.crm1-parity-telephony,.crm1-parity-section{border-radius:14px!important;background:#fff!important}
+.crm1-parity-panel-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px}
+.crm1-parity-panel-title h3,.crm1-parity-section>h3{margin:0 0 4px;color:#164b30;font-size:18px}
+.crm1-parity-panel-title .sub{font-size:12px;color:#69756e}
+.crm1-parity-panel-title .status-chip{white-space:nowrap}
+.crm1-parity-call-grid{grid-template-columns:1fr 1fr 1fr!important}
+.crm1-parity-field{margin:0!important}
+.crm1-parity-field>label{font-size:12px;font-weight:800;color:#164b30;margin-bottom:6px}
+.crm1-parity-field input,.crm1-parity-readonly{width:100%;min-height:42px;padding:11px 12px;border:1px solid #dfe7e1;border-radius:10px;background:#fff;box-sizing:border-box}
+.crm1-parity-readonly{color:#18241d}
+.crm1-parity-actions{justify-content:flex-start!important;margin-top:14px!important}
+.crm1-parity-end{color:#b43b35!important;border-color:#b43b35!important;background:#fff!important}
+.crm1-parity-telephony{padding-top:14px!important;padding-bottom:14px!important}
+.crm1-parity-unconfigured{font-size:12px;font-weight:800;color:#b43b35;white-space:nowrap}
+.crm1-parity-tele-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.crm1-parity-phone{flex:1 1 220px;min-width:180px;height:42px;padding:10px 12px;border:1px solid #dfe7e1;border-radius:10px;box-sizing:border-box}
+.crm1-parity-admin-note{margin-top:10px;font-size:12px}
+.crm1-parity-section{padding:18px!important;margin-bottom:18px!important}
+.crm1-parity-section>h3{margin-bottom:14px!important}
+.crm1-parity-customer-grid,.crm1-parity-order-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:12px!important}
+.crm1-parity-address-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:0}
+.crm1-parity-address-grid .field.full{grid-column:1/-1}
+.crm1-parity-address-grid .saved-addresses{grid-column:1/-1}
+.crm1-parity-section .field label{display:block;font-size:12px;font-weight:800;color:#164b30;margin-bottom:6px}
+.crm1-parity-section input,.crm1-parity-section select,.crm1-parity-section textarea{width:100%;box-sizing:border-box}
+.crm1-parity-section textarea{min-height:80px}
+.crm1-parity-history{margin-top:10px}
+.crm1-parity-summary{margin-top:0}
+.erp-order-workspace .order-workspace-grid{display:block!important}
+.erp-order-workspace .order-summary-card{margin-top:0}
+.erp-order-workspace .order-head-actions{display:flex;align-items:center;gap:8px}
+@media(max-width:900px){.crm1-parity-address-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){.crm1-parity-call-grid,.crm1-parity-customer-grid,.crm1-parity-order-grid,.crm1-parity-address-grid{grid-template-columns:1fr!important}.crm1-parity-panel-title{flex-direction:column}.crm1-parity-unconfigured{white-space:normal}.crm1-parity-tele-row{align-items:stretch}.crm1-parity-phone{flex-basis:100%}.crm1-parity-actions .btn{flex:1}}
