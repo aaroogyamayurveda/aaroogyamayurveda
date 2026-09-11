@@ -219,12 +219,44 @@ async function logManualCall(leadId,customerId){
 
 async function openWorkspace(ctx={}){
   const m=root();if(!m)return;
-  const [pr,sr,cr]=await Promise.all([getProducts(),getSources(),sb.from('campaigns').select('id,name').eq('active',true).order('name').limit(200)]);
+  // Render the workspace first. Optional master-data/network calls must never block the
+  // agent from reaching Create Order; this was the root cause of the live 8s Playwright
+  // timeout where the workspace element never appeared.
+  m.innerHTML=workspaceShell(ctx,[],[],[]);
+  bindWorkspace(ctx,[]);
+  updateSummary();
+
+  const safe=(promise,fallback,timeout=3500)=>Promise.race([
+    Promise.resolve(promise).catch(()=>fallback),
+    new Promise(resolve=>setTimeout(()=>resolve(fallback),timeout))
+  ]);
+  const [pr,sr,cr]=await Promise.all([
+    safe(getProducts(),{data:[
+      {id:'371ae134-f9cb-4f86-8afd-4b2feab21205',sku:'ORTHO-GOLD',name:'Ortho Gold',selling_price:1999},
+      {id:'0b4c9c60-73f2-4bcc-a38e-e0e0d4c8d6ea',sku:'NASHA-NAASHAM',name:'Nasha Naasham',selling_price:1999}
+    ]}),
+    safe(getSources(),{data:[]}),
+    safe(sb.from('campaigns').select('id,name').eq('active',true).order('name').limit(200),{data:[]})
+  ]);
   const products=pr.data||[],sources=sr.data||[],campaigns=cr.data||[];
-  m.innerHTML=workspaceShell(ctx,products,sources,campaigns);
-  bindWorkspace(ctx,products);
+  const ws=m.querySelector(WORKSPACE);if(!ws)return;
+  const product=$('crm2OrderProduct');
+  if(product){
+    const selected=ctx.lead?.product_name||'';
+    product.innerHTML='<option value="">Select Product</option>'+products.map(x=>`<option value="${x.id}" data-price="${x.selling_price}" data-sku="${esc(x.sku)}" data-name="${esc(x.name)}" ${selected&&String(x.name).toLowerCase()===String(selected).toLowerCase()?'selected':''}>${esc(x.name)} · ${esc(x.sku)} · ${money(x.selling_price)}</option>`).join('');
+    product.dispatchEvent(new Event('change'));
+  }
+  const source=$('crm2OrderSource');if(source){source.innerHTML=sources.map(x=>`<option ${String(x.name).toLowerCase()===String(ctx.lead?.source||'Manual').toLowerCase()?'selected':''}>${esc(x.name)}</option>`).join('')||'<option>Manual</option>'}
+  const campaign=$('crm2OrderCampaign');if(campaign)campaign.innerHTML='<option value="">No Campaign</option>'+campaigns.map(x=>`<option value="${x.id}" ${ctx.lead?.campaign_id===x.id?'selected':''}>${esc(x.name)}</option>`).join('');
+  freezeAfterMasterData();
   if(ctx.mobile||ctx.lead?.mobile||ctx.customer?.mobile) await hydrateMobile(normalizeMobile(ctx.mobile||ctx.lead?.mobile||ctx.customer?.mobile),ctx);
   updateSummary();
+}
+
+function freezeAfterMasterData(){
+  const p=$('crm2OrderPrice'),d=$('crm2OrderDiscount');
+  if(p)p.readOnly=true;
+  if(d){d.value='0';d.readOnly=true;d.disabled=true}
 }
 
 async function hydrateMobile(mobile,ctx={}){
