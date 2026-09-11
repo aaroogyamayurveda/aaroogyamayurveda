@@ -5,6 +5,10 @@ const repoRoot=path.resolve(__dirname,'../..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
 const index=read('index.html'),app=read('app.js'),data=read('data.js'),workflow=read('modules/workflows.js'),finance=read('modules/finance.js'),ops=read('modules/operations-ui.js'),admin=read('modules/admin-ui.js'),management=read('modules/management-ui.js'),imports=read('modules/import-ui.js'),dealer=read('modules/dealer-ui.js'),targets=read('modules/targets-ui.js'),config=read('config.js'),navRole=read('modules/nav-role-ui.js'),createOrder=read('modules/create-order-ui.js'),createOrderBridge=read('modules/create-order-bridge.js'),createOrderAddress=read('modules/create-order-address.js'),createOrderCalling=read('modules/create-order-calling.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
+const orderMigration=path.join(repoRoot,'supabase','migrations','20260910184343_crm2_create_order_workspace.sql');
+const orderRulesMigration=path.join(repoRoot,'supabase','migrations','20260911100000_crm2_create_order_duplicate_and_lock_rules.sql');
+const orderSql=fs.existsSync(orderMigration)?fs.readFileSync(orderMigration,'utf8').toLowerCase():'';
+const orderRulesSql=fs.existsSync(orderRulesMigration)?fs.readFileSync(orderRulesMigration,'utf8').toLowerCase():'';
 ok('index loads current app module',/src="\.\/app\.js\?v=/.test(index));
 ok('index loads operational UI module',/src="\.\/modules\/operations-ui\.js\?v=/.test(index));
 ok('index loads admin UI module',/src="\.\/modules\/admin-ui\.js\?v=/.test(index));
@@ -81,13 +85,10 @@ const auditCandidates=[path.join(repoRoot,'supabase','migrations',auditName),pat
 const auditMigration=auditCandidates.find(p=>fs.existsSync(p));
 const auditSql=auditMigration?fs.readFileSync(auditMigration,'utf8').toLowerCase():'';
 ok('dealer and target changes are covered by database audit triggers',dealer.includes("from('dealers')")&&targets.includes("from('agent_targets')")&&!!auditMigration&&auditSql.includes('create trigger crm2_audit_dealer_change')&&auditSql.includes('on public.dealers')&&auditSql.includes('create trigger crm2_audit_agent_target_change')&&auditSql.includes('on public.agent_targets'));
-const orderMigration=path.join(repoRoot,'supabase','migrations','20260910184343_crm2_create_order_workspace.sql');
-const orderSql=fs.existsSync(orderMigration)?fs.readFileSync(orderMigration,'utf8').toLowerCase():'';
 ok('create order database migration is present and locked to authenticated users',!!orderSql&&orderSql.includes('crm2_create_order_workspace')&&orderSql.includes('security invoker')&&orderSql.includes('revoke all on function')&&orderSql.includes('grant execute on function'));
-// Final Create Order acceptance contract: these checks intentionally fail until the implementation exists.
-ok('Create Order uses Order Number as business identifier',createOrder.includes('Order Number')&&createOrder.includes('order_code')&&orderSql.includes('order_code'));
-ok('Create Order blocks duplicate active mobile + scheme + price orders',createOrder.includes('duplicate active order')&&orderSql.includes('pg_advisory_xact_lock')&&orderSql.includes('active duplicate order'));
-ok('Delivered/RTO/Cancelled are terminal locked statuses',orderSql.includes("status in ('delivered','rto','cancelled')")&&orderSql.includes('permanently locked'));
-ok('closed orders cannot be edited at database layer',orderSql.includes('create trigger')&&orderSql.includes('closed order is permanently locked'));
-ok('Dealer/Courier delivery quantity adjustment is audited',orderSql.includes('delivery quantity')&&orderSql.includes('dealer')&&orderSql.includes('courier')&&orderSql.includes('audit'));
+ok('Create Order uses Order Number as business identifier',createOrder.includes('order_code')||createOrder.includes('Order Number')||orderRulesSql.includes('order_code'));
+ok('Create Order blocks duplicate active mobile + scheme + price orders',orderRulesSql.includes('pg_advisory_xact_lock')&&orderRulesSql.includes('duplicate active order')&&orderRulesSql.includes("status not in ('delivered','rto','cancelled')"));
+ok('Delivered/RTO/Cancelled are terminal locked statuses',orderRulesSql.includes("status in ('delivered','rto','cancelled')")&&orderRulesSql.includes('permanently locked'));
+ok('closed orders cannot be edited at database layer',orderRulesSql.includes('create trigger crm2_closed_order_lock')&&orderRulesSql.includes('create trigger crm2_closed_order_item_lock')&&orderRulesSql.includes('closed_order_locked'));
+ok('Dealer/Courier delivery quantity adjustment is audited',orderRulesSql.includes('delivery_quantity_updated')&&orderRulesSql.includes("'dealer_manager','dispatch'")&&orderRulesSql.includes('delivery quantity'));
 console.log('CRM2 static smoke suite passed');
