@@ -16,7 +16,7 @@ ok('index loads create order workspace module',/src="\.\/modules\/create-order-u
 ok('index loads create order calling lifecycle module',/src="\.\/modules\/create-order-calling\.js\?v=\d+-\d+/.test(index));
 ok('role/navigation modules use a cache-bust version',/src="\.\/modules\/nav-role-ui\.js\?v=\d+-\d+/.test(index));
 ok('role navigation renderer exposes management labels',navRole.includes('Lead Assignment')&&navRole.includes('MIS Drilldown'));
-ok('index does not load duplicate Supabase client',index.match(/supabase-js@2/g)?.length===1);
+ok('index does not load duplicate Supabase client',!index.includes('supabase-js')&&data.match(/createClient\(/g)?.length===1);
 ok('no legacy/fix JS',!index.includes('legacy')&&!index.includes('fix.js'));
 ok('manual mobile calling is first-class',createOrder.includes('tel:'));
 ok('working lead status is used',workflow.includes("status:'callback'")||workflow.includes('status = callback')||createOrderCalling.includes("status:'callback'"));
