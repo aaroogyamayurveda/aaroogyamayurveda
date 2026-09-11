@@ -23,8 +23,10 @@ jobs:
         run: |
           node --check crm2/modules/admin-ui.js
           node --check crm2/modules/create-order-ui.js
+          node --check crm2/modules/create-order-calling.js
           node --check crm2/ui-modern.js
-      - run: node crm2/tests/smoke.js
+      - name: Run CRM2 smoke suite
+        run: node crm2/tests/smoke.js
 
   browser:
     needs: smoke
@@ -79,6 +81,11 @@ jobs:
             if [ -z "${!name:-}" ]; then echo "Missing GitHub Actions secret: $name"; missing=1; fi
           done
           test "$missing" -eq 0
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: crm2-playwright-${{ runner.os }}-chromium-1.55.0
       - name: Install Playwright dependencies
         working-directory: crm2/tests
         run: npm install --no-audit --no-fund
