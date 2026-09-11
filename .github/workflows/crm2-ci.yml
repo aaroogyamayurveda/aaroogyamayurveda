@@ -24,9 +24,12 @@ jobs:
           node --check crm2/modules/admin-ui.js
           node --check crm2/modules/create-order-ui.js
           node --check crm2/modules/create-order-calling.js
+          node --check crm2/modules/create-order-crm1-parity.js
           node --check crm2/ui-modern.js
       - name: Run CRM2 smoke suite
         run: node crm2/tests/smoke.js
+      - name: Run Create Order CRM1 parity smoke suite
+        run: node crm2/tests/create-order-parity-smoke.js
 
   browser:
     needs: smoke
