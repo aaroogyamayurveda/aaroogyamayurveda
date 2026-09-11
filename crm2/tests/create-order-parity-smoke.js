@@ -1,15 +1,15 @@
 const fs=require('fs'),path=require('path');
 const dir=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const index=read('index.html'),parity=read('modules/create-order-crm1-parity.js'),css=read('create-order-crm1-parity.css'),bridge=read('modules/create-order-bridge.js');
+const index=read('index.html'),parity=read('modules/create-order-crm1-parity.js'),orderUi=read('modules/create-order-ui.js'),css=read('create-order-crm1-parity.css'),bridge=read('modules/create-order-bridge.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
 ok('CRM1 parity stylesheet is loaded',/create-order-crm1-parity\.css\?v=/.test(index));
 ok('CRM1 parity module is loaded',/modules\/create-order-crm1-parity\.js\?v=/.test(index));
 ok('manual phone console matches CRM1 structure',parity.includes('Manual Phone Call Console')&&parity.includes('Customer Mobile')&&parity.includes('Agent Status')&&parity.includes('Call Timer'));
 ok('manual call controls match CRM1 labels',parity.includes('Start Manual Call')&&parity.includes('End Call')&&parity.includes('Log Manual Call'));
 ok('telephony controls match CRM1 labels',parity.includes('Telephony')&&parity.includes('Call via SIP')&&parity.includes('Phone')&&parity.includes('Log Call'));
-ok('customer details parity is implemented',parity.includes('Customer Details')&&parity.includes('crm2OrderMobile')&&parity.includes('crm2OrderPincode')&&parity.includes('crm2SavedAddresses'));
-ok('order details parity is implemented',parity.includes('Order Details')&&parity.includes('crm2OrderProduct')&&parity.includes('crm2OrderQty')&&parity.includes('crm2OrderPayment'));
+ok('customer details parity is implemented',parity.includes('Customer Details')&&orderUi.includes('crm2OrderMobile')&&orderUi.includes('crm2OrderPincode')&&orderUi.includes('crm2SavedAddresses'));
+ok('order details parity is implemented',parity.includes('Order Details')&&orderUi.includes('crm2OrderProduct')&&orderUi.includes('crm2OrderQty')&&orderUi.includes('crm2OrderPayment'));
 ok('remarks is a single dedicated block',parity.includes('crm1-remarks-panel')&&parity.includes('<h3>Remarks</h3>')&&!parity.includes('Order Remarks'));
 ok('disposition level 1 and level 2 exist',parity.includes('Disposition Level 1 *')&&parity.includes('Disposition Level 2 *')&&parity.includes('crm1Disposition1')&&parity.includes('crm1Disposition2'));
 ok('submit disposition exists',parity.includes('Submit Disposition')&&parity.includes('crm1SubmitDisposition'));
