@@ -25,4 +25,5 @@ ok('requested products and price are seeded by migration',read('../supabase/migr
 ok('Sales Order dispositions are seeded',read('../supabase/migrations/20260912003000_crm2_sales_order_dispositions.sql').includes('Express Order')&&read('../supabase/migrations/20260912003000_crm2_sales_order_dispositions.sql').includes('Urgent Order')&&read('../supabase/migrations/20260912003000_crm2_sales_order_dispositions.sql').includes('Fresh Order'));
 ok('database discount freeze migration is present',read('../supabase/migrations/20260911123000_crm2_freeze_order_discount_zero.sql').includes('trg_crm2_force_zero_order_discount')&&read('../supabase/migrations/20260911123000_crm2_freeze_order_discount_zero.sql').includes('new.discount := 0'));
 ok('desktop and mobile parity layouts are defined',css.includes('grid-template-columns:1fr 1fr')&&css.includes('@media(max-width:650px)'));
+ok('create order workspace renders before optional master-data loads',orderUi.includes('Render the workspace first')&&orderUi.includes('Promise.race'));
 console.log('CRM2 Create Order final CRM1 parity smoke suite passed');
