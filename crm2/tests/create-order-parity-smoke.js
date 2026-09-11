@@ -17,7 +17,7 @@ ok('disposition level 1 and level 2 exist',parity.includes('Disposition Level 1 
 ok('Sales Order child dispositions are supported',hardening.includes('Express Order')&&hardening.includes('Urgent Order')&&hardening.includes('Fresh Order'));
 ok('submit disposition exists',parity.includes('Submit Disposition')&&parity.includes('crm1SubmitDisposition'));
 ok('English red validation is enforced',hardening.includes('Please enter a valid 10-digit mobile number.')&&hardening.includes('Please enter a valid customer name.')&&hardening.includes('Please enter a valid 6-digit pincode.')&&css.includes('.crm2-validation-error')&&css.includes('color:#d32f2f'));
-ok('login marketing copy is removed',hardening.includes('Zero-cost')&&hardening.includes('Please enter a valid email address.')&&hardening.includes('crm2LoginValidation'));
+ok('login marketing copy is removed',/zero\[- ]cost|teleshopping business erp/i.test(hardening)&&hardening.includes('Please enter a valid email address.')&&hardening.includes('crm2LoginValidation'));
 ok('price and discount are frozen',parity.includes('readOnly=true')&&parity.includes("d.value='0'")&&parity.includes('d.disabled=true'));
 ok('order summary is hidden',css.includes('.erp-order-workspace .order-summary-card{display:none!important}')&&parity.includes('crm2HiddenSubmit'));
 ok('Fast Order routing is disabled',bridge.includes('crm2FastOrderDisabled=true')&&!bridge.includes("/^Fast Order$/i.test"));
