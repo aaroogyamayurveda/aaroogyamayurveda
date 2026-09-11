@@ -179,7 +179,7 @@ test('agent: create order workspace is available from Orders and Calling', async
   const createAction = page.getByRole('button', { name: /Create Order|Fast Order/i }).first();
   await createAction.click();
   await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
-  for (const label of ['Customer Name', 'Mobile Number', 'Pincode', 'State', 'City', 'Area / Post', 'Complete Delivery Address', 'Product', 'Quantity', 'Payment Mode']) await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 5_000 });
+  for (const label of ['Customer Name *', 'Mobile Number *', 'Pincode *', 'State *', 'City *', 'Area / Post *', 'Complete Delivery Address *', 'Product *', 'Quantity *', 'Payment Mode *']) await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 5_000 });
   await sideButton(page, 'Calling').click();
   await expect(page.getByRole('button', { name: /Create Order/i }).first()).toBeVisible({ timeout: 8_000 });
 });
@@ -194,7 +194,7 @@ test('agent: create order workspace exposes CRM1-equivalent address and call con
   await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
   await expect(page.locator('#crm2OrderMobile')).toHaveAttribute('inputmode', 'numeric');
   await expect(page.locator('#crm2OrderPincode')).toHaveAttribute('inputmode', 'numeric');
-  await expect(page.getByRole('button', { name: /Call Mobile/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Call Mobile/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /Create Order/i }).last()).toBeVisible();
   await expect(page.locator('#crm2OrderState')).toBeVisible();
   await expect(page.locator('#crm2OrderCity')).toBeVisible();
