@@ -69,7 +69,7 @@ ok('create order supports pincode auto-fill with fallback',createOrder.includes(
 ok('create order preserves attribution',createOrder.includes('campaign_id')&&createOrder.includes('source')&&createOrder.includes('priority'));
 ok('create order supports manual and telephony call paths',createOrder.includes('tel:')&&createOrder.includes('crm2StartTelephonyCall'));
 ok('Fast Order action is routed to the unified workspace',createOrderBridge.includes('Fast Order')&&createOrderBridge.includes('crm2OpenCreateOrder')&&createOrderBridge.includes('stopImmediatePropagation')&&createOrderBridge.includes("addEventListener('click'")&&createOrderBridge.includes(',true)'));
-ok('create order call lifecycle has Start/End controls and timer',createOrderCalling.includes("id='crm2CallStart'")&&createOrderCalling.includes("id='crm2CallEnd'")&&createOrderCalling.includes('id=\"crm2CallTimer\"')&&createOrderCalling.includes('duration_seconds'));
+ok('create order call lifecycle has Start/End controls and timer',createOrderCalling.includes("start.id='crm2CallStart'")&&createOrderCalling.includes("end.id='crm2CallEnd'")&&createOrderCalling.includes("timer.id='crm2CallTimer'")&&createOrderCalling.includes('duration_seconds'));
 ok('call lifecycle stores start and end timestamps',createOrderCalling.includes('started_at')&&createOrderCalling.includes('ended_at'));
 ok('callback scheduling stores due date/time and assignment',createOrderCalling.includes('due_at')&&createOrderCalling.includes('assigned_to')&&createOrderCalling.includes('Save Callback'));
 ok('callback prevents duplicate active save',createOrderCalling.includes('callbackSaved')&&createOrderCalling.includes('callbackSaving'));
