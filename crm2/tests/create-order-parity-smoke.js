@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path');
 const dir=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(dir,f),'utf8');
-const index=read('index.html'),parity=read('modules/create-order-crm1-parity.js'),css=read('create-order-crm1-parity.css');
+const index=read('index.html'),parity=read('modules/create-order-crm1-parity.js'),css=read('create-order-crm1-parity.css'),bridge=read('modules/create-order-bridge.js');
 function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS: '+name)}
 ok('CRM1 parity stylesheet is loaded',/create-order-crm1-parity\.css\?v=/.test(index));
 ok('CRM1 parity module is loaded',/modules\/create-order-crm1-parity\.js\?v=/.test(index));
@@ -14,7 +14,7 @@ ok('remarks is a single dedicated block',parity.includes('crm1-remarks-panel')&&
 ok('disposition level 1 and level 2 exist',parity.includes('Disposition Level 1 *')&&parity.includes('Disposition Level 2 *')&&parity.includes('crm1Disposition1')&&parity.includes('crm1Disposition2'));
 ok('submit disposition exists',parity.includes('Submit Disposition')&&parity.includes('crm1SubmitDisposition'));
 ok('order summary is hidden',css.includes('.erp-order-workspace .order-summary-card{display:none!important}')&&parity.includes('crm2HiddenSubmit'));
-ok('Fast Order bridge is not loaded by CRM2',!index.includes('create-order-bridge.js'));
+ok('Fast Order routing is disabled',bridge.includes('crm2FastOrderDisabled=true')&&!bridge.includes("/^Fast Order$/i.test"));
 ok('requested products and price are seeded by migration',read('../supabase/migrations/20260911170000_crm2_create_order_products_dispositions.sql').includes("'Ortho Gold'")&&read('../supabase/migrations/20260911170000_crm2_create_order_products_dispositions.sql').includes("'Nasha Naasham'")&&read('../supabase/migrations/20260911170000_crm2_create_order_products_dispositions.sql').includes('1999,1999'));
 ok('desktop and mobile parity layouts are defined',css.includes('grid-template-columns:1fr 1fr')&&css.includes('@media(max-width:650px)'));
 console.log('CRM2 Create Order final CRM1 parity smoke suite passed');
