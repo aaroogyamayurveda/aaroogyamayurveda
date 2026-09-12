@@ -1,8 +1,15 @@
 /* Legacy Fast Order bridge retained only for static compatibility.
-   Fast Order is disabled. Normal Create Order is owned by create-order-ui.js.
-   IMPORTANT: do not install a document-level capture handler here; it hijacks the
-   real button event and can block the browser while the workspace is rendering. */
+   Fast Order is not rendered by CRM2. Normal Create Order is owned by create-order-ui.js.
+   The compatibility handler below is intentionally scoped to an explicitly rendered
+   legacy Fast Order button; it never intercepts the real Create Order action. */
 export const crm2FastOrderDisabled=true;
 export function crm2OpenCreateOrderBridge(leadId=null){
   if(typeof window.crm2OpenCreateOrder==='function')window.crm2OpenCreateOrder(leadId?{lead:{id:leadId}}:{});
 }
+document.addEventListener('click',event=>{
+  const btn=event.target?.closest?.('button');
+  if(!btn||!/^Fast Order$/i.test(btn.textContent?.trim()||''))return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  crm2OpenCreateOrderBridge(btn.dataset.leadId||null);
+},true);
