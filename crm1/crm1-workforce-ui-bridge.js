@@ -5,134 +5,22 @@
   var agentRoles=['agent','management','order_manager','super_admin'];
   var wait=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
   var userId=null, navObserverStarted=false;
-
   function navText(b){return String(b&&b.textContent||'').replace(/\s+/g,' ').trim().replace(/^[^A-Za-z]+/,'').trim();}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m];});}
-
-  function canonicalizeNav(){
-    var nav=document.getElementById('nav');
-    if(!nav)return;
-    var keep={
-      'Lead Assignment':'crm1W2Nav_crm1W2Assignment',
-      'Lead Import':'crm1W2Nav_crm1W2Import',
-      'Manager Control':'crm1W2Nav_crm1W2Manager',
-      "Today's Calling Queue":'crm1W2Nav_crm1W2Queue'
-    };
-    Object.keys(keep).forEach(function(label){
-      var matches=Array.prototype.filter.call(nav.querySelectorAll('button'),function(b){return navText(b)===label;});
-      if(matches.length){
-        matches.forEach(function(b,i){if(i>0)b.remove();});
-        if(matches[0].id!==keep[label])matches[0].remove();
-      }
-    });
+  function activate(id){document.querySelectorAll('.main .page').forEach(function(x){x.classList.remove('active');});var p=document.getElementById(id);if(p)p.classList.add('active');document.querySelectorAll('#nav button').forEach(function(b){b.classList.remove('active');});var b=document.getElementById('crm1W2Nav_'+id);if(b)b.classList.add('active');window.scrollTo(0,0);return p;}
+  function canonicalizeNav(){var nav=document.getElementById('nav');if(!nav)return;var keep={'Lead Assignment':'crm1W2Nav_crm1W2Assignment','Lead Import':'crm1W2Nav_crm1W2Import','Manager Control':'crm1W2Nav_crm1W2Manager',"Today's Calling Queue":'crm1W2Nav_crm1W2Queue'};Object.keys(keep).forEach(function(label){var matches=Array.prototype.filter.call(nav.querySelectorAll('button'),function(b){return navText(b)===label;});if(matches.length){matches.forEach(function(b,i){if(i>0)b.remove();});if(matches[0].id!==keep[label])matches[0].remove();}});}
+  function queuePage(){var p=document.getElementById('crm1W2Queue');if(!p){var main=document.querySelector('.main');if(!main)return null;p=document.createElement('section');p.id='crm1W2Queue';p.className='page';p.innerHTML='<div class="title"><div><h2>Today\'s Calling Queue</h2><div class="sub">Customers assigned to you for manual outbound calling</div></div></div><div class="panel"><div id="crm1W2_queueMsg" class="crm1wf2-msg"></div><div id="crm1W2_queueTable"></div></div>';main.appendChild(p);}return p;}
+  function openQueue(){var p=queuePage();if(!p)return;activate('crm1W2Queue');var box=document.getElementById('crm1W2_queueTable'),msg=document.getElementById('crm1W2_queueMsg');if(!box||!window.sb)return;msg.textContent='Loading queue...';window.sb.from('crm_leads').select('id,mobile,lead_name,product_name,city,state,lead_status').eq('assigned_to',userId).in('lead_status',['assigned','contacted','followup','qualified']).order('assigned_at',{ascending:true}).then(function(r){if(r.error)throw r.error;var data=r.data||[];msg.textContent=data.length+' active leads in your queue.';box.innerHTML='<table><thead><tr><th>Mobile</th><th>Customer</th><th>Product</th><th>City</th><th>State</th><th>Status</th></tr></thead><tbody>'+(data.map(function(x){return'<tr><td>'+esc(x.mobile)+'</td><td>'+esc(x.lead_name||'')+'</td><td>'+esc(x.product_name||'')+'</td><td>'+esc(x.city||'')+'</td><td>'+esc(x.state||'')+'</td><td><span class="pill">'+esc(x.lead_status||'')+'</span></td></tr>';}).join('')||'<tr><td colspan="6" class="empty">No leads assigned.</td></tr>')+'</tbody></table>';}).catch(function(e){msg.textContent='Queue error: '+(e.message||String(e));msg.className='crm1wf2-msg err';box.innerHTML='';});}
+  function assignmentPage(){var p=document.getElementById('crm1W2Assignment');if(!p){var main=document.querySelector('.main');if(!main)return null;p=document.createElement('section');p.id='crm1W2Assignment';p.className='page';p.innerHTML='<div class="title"><div><h2>Lead Assignment</h2><div class="sub">Select a batch, select an agent, then assign calls</div></div></div><div class="panel"><div class="crm1wf2-actions"><select id="crm1W2_batch"><option value="">Select Batch</option></select><select id="crm1W2_agent"><option value="">Select Agent</option></select><button class="btn" id="crm1W2_load">Load Leads</button><button class="btn" id="crm1W2_assign">Assign Selected</button></div><div id="crm1W2_assignMsg" class="crm1wf2-msg"></div><div id="crm1W2_assignTable"></div></div>';main.appendChild(p);}return p;}
+  function openAssignment(){var p=assignmentPage();if(!p)return;activate('crm1W2Assignment');var batch=document.getElementById('crm1W2_batch'),agent=document.getElementById('crm1W2_agent'),msg=document.getElementById('crm1W2_assignMsg'),box=document.getElementById('crm1W2_assignTable');if(!batch||!agent||!window.sb)return;window.sb.from('crm_lead_batches').select('id,file_name,created_at,valid_records').order('created_at',{ascending:false}).then(function(r){if(r.error)throw r.error;batch.innerHTML='<option value="">Select Batch</option>'+(r.data||[]).map(function(x){return'<option value="'+x.id+'">'+esc(x.file_name)+' — '+esc(x.valid_records)+'</option>';}).join('');return window.sb.from('profiles').select('id,full_name,email').eq('is_active',true).eq('role','agent').order('full_name');}).then(function(r){if(r.error)throw r.error;agent.innerHTML='<option value="">Select Agent</option>'+(r.data||[]).map(function(x){return'<option value="'+x.id+'">'+esc(x.full_name||x.email)+'</option>';}).join('');}).catch(function(e){msg.textContent='Load error: '+(e.message||String(e));msg.className='crm1wf2-msg err';});
+    document.getElementById('crm1W2_load').onclick=function(){var bid=batch.value;if(!bid){box.innerHTML='<div class="empty">Select a batch first.</div>';return;}window.sb.from('crm_leads').select('id,mobile,lead_name,product_name,city,state,pincode,lead_status').eq('batch_id',bid).is('assigned_to',null).in('lead_status',['new','assigned']).order('created_at',{ascending:true}).limit(1000).then(function(r){if(r.error)throw r.error;var data=r.data||[];box.innerHTML='<p>'+data.length+' unassigned leads</p><table><thead><tr><th><input type="checkbox" id="crm1W2_all"></th><th>Mobile</th><th>Customer</th><th>Product</th><th>City</th><th>State</th></tr></thead><tbody>'+data.map(function(x){return'<tr><td><input class="crm1W2_check" type="checkbox" value="'+x.id+'"></td><td>'+esc(x.mobile)+'</td><td>'+esc(x.lead_name)+'</td><td>'+esc(x.product_name||'')+'</td><td>'+esc(x.city||'')+'</td><td>'+esc(x.state||'')+'</td></tr>';}).join('')+'</tbody></table>';var all=document.getElementById('crm1W2_all');if(all)all.onchange=function(){document.querySelectorAll('.crm1W2_check').forEach(function(c){c.checked=all.checked;});};}).catch(function(e){box.innerHTML='<div class="crm1wf2-msg err">'+esc(e.message||e)+'</div>';});};
+    document.getElementById('crm1W2_assign').onclick=function(){var aid=agent.value,ids=Array.prototype.map.call(document.querySelectorAll('.crm1W2_check:checked'),function(x){return x.value;});if(!aid){msg.textContent='Select Agent first.';msg.className='crm1wf2-msg err';return;}if(!ids.length){msg.textContent='Select at least one lead.';msg.className='crm1wf2-msg err';return;}var now=new Date().toISOString();window.sb.from('crm_leads').update({assigned_to:aid,assigned_at:now,lead_status:'assigned',updated_at:now}).in('id',ids).then(function(r){if(r.error)throw r.error;return window.sb.from('crm_lead_assignments').insert(ids.map(function(id){return{lead_id:id,agent_id:aid,assigned_by:userId,assignment_date:new Date().toISOString().slice(0,10),status:'assigned'};});}).then(function(r){if(r.error)throw r.error;msg.textContent=ids.length+' leads assigned successfully.';msg.className='crm1wf2-msg';document.getElementById('crm1W2_load').click();}).catch(function(e){msg.textContent='Assignment error: '+(e.message||String(e));msg.className='crm1wf2-msg err';});};
   }
-
-  function queuePage(){
-    var p=document.getElementById('crm1W2Queue');
-    if(!p){
-      var main=document.querySelector('.main');
-      if(!main)return null;
-      p=document.createElement('section');
-      p.id='crm1W2Queue';p.className='page';
-      p.innerHTML='<div class="title"><div><h2>Today\'s Calling Queue</h2><div class="sub">Customers assigned to you for manual outbound calling</div></div></div><div class="panel"><div id="crm1W2_queueMsg" class="crm1wf2-msg"></div><div id="crm1W2_queueTable"></div></div>';
-      main.appendChild(p);
-    }
-    return p;
-  }
-
-  function openQueue(){
-    var p=queuePage();
-    if(!p)return;
-    document.querySelectorAll('.main .page').forEach(function(x){x.classList.remove('active');});
-    p.classList.add('active');
-    document.querySelectorAll('#nav button').forEach(function(b){b.classList.remove('active');});
-    var b=document.getElementById('crm1W2Nav_crm1W2Queue');if(b)b.classList.add('active');
-    window.scrollTo(0,0);
-    var box=document.getElementById('crm1W2_queueTable'),msg=document.getElementById('crm1W2_queueMsg');
-    if(!box||!window.sb)return;
-    msg.textContent='Loading queue...';
-    window.sb.from('crm_leads').select('id,mobile,lead_name,product_name,city,state,lead_status').eq('assigned_to',userId).in('lead_status',['assigned','contacted','followup','qualified']).order('assigned_at',{ascending:true}).then(function(r){
-      if(r.error)throw r.error;
-      var data=r.data||[];
-      msg.textContent=data.length+' active leads in your queue.';
-      box.innerHTML='<table><thead><tr><th>Mobile</th><th>Customer</th><th>Product</th><th>City</th><th>State</th><th>Status</th></tr></thead><tbody>'+(data.map(function(x){return'<tr><td>'+esc(x.mobile)+'</td><td>'+esc(x.lead_name||'')+'</td><td>'+esc(x.product_name||'')+'</td><td>'+esc(x.city||'')+'</td><td>'+esc(x.state||'')+'</td><td><span class="pill">'+esc(x.lead_status||'')+'</span></td></tr>';}).join('')||'<tr><td colspan="6" class="empty">No leads assigned.</td></tr>')+'</tbody></table>';
-    }).catch(function(e){msg.textContent='Queue error: '+(e.message||String(e));msg.className='crm1wf2-msg err';box.innerHTML='';});
-  }
-
-  function addButton(id,label){
-    var nav=document.getElementById('nav');
-    if(!nav)return;
-    var b=document.getElementById(id);
-    if(!b){
-      b=document.createElement('button');
-      b.type='button'; b.id=id; b.textContent=label;
-      b.dataset.crm1WorkforceNav='1';
-      nav.appendChild(b);
-    }
-    b.onclick=function(e){
-      if(e){e.preventDefault();e.stopPropagation();}
-      if(id==='crm1W2Nav_crm1W2Queue'){openQueue();return;}
-      var target=id.replace('crm1W2Nav_','');
-      if(window.crm1WorkforceOpenPage){window.crm1WorkforceOpenPage(target);return;}
-      setTimeout(function(){if(window.crm1WorkforceOpenPage)window.crm1WorkforceOpenPage(target);},150);
-    };
-  }
-
-  async function profileFor(user){
-    try{
-      var r=await window.sb.from('profiles').select('id,full_name,email,role,is_active').eq('id',user.id).maybeSingle();
-      return r.data||null;
-    }catch(e){return null;}
-  }
-
-  async function ensure(){
-    if(!window.sb||!window.sb.auth)return;
-    var r=await window.sb.auth.getUser();
-    var user=r&&r.data&&r.data.user;
-    if(!user){userId=null;return;}
-    userId=user.id;
-    var p=await profileFor(user); if(!p)return;
-    canonicalizeNav();
-    if(managerRoles.indexOf(p.role)>=0){
-      addButton('crm1W2Nav_crm1W2Manager','📊 Manager Control');
-      addButton('crm1W2Nav_crm1W2Import','📥 Lead Import');
-      addButton('crm1W2Nav_crm1W2Assignment','👥 Lead Assignment');
-    }
-    if(agentRoles.indexOf(p.role)>=0) addButton('crm1W2Nav_crm1W2Queue',"📞 Today's Calling Queue");
-  }
-
-  function observe(){
-    if(navObserverStarted)return; navObserverStarted=true;
-    var start=function(){
-      var nav=document.getElementById('nav');
-      if(!nav)return;
-      new MutationObserver(function(){setTimeout(ensure,50);}).observe(nav,{childList:true,subtree:true});
-      ensure();
-    };
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
-  }
-
-  function loadWorkforce(){
-    if(window.__crm1WorkforceV2Injected)return Promise.resolve();
-    window.__crm1WorkforceV2Injected='loading';
-    return new Promise(function(resolve,reject){
-      var s=document.createElement('script'); s.src='./crm1-workforce-v2.js?v=7'; s.async=false;
-      s.onload=function(){window.__crm1WorkforceV2Injected='loaded';setTimeout(ensure,120);resolve();};
-      s.onerror=function(){window.__crm1WorkforceV2Injected=null;reject(new Error('CRM1 workforce module failed to load'));};
-      document.head.appendChild(s);
-    });
-  }
-
-  async function start(){
-    for(var i=0;i<80;i++){if(window.sb&&window.sb.auth)break;await wait(250);}
-    if(!window.sb||!window.sb.auth)return;
-    observe();
-    try{var r=await window.sb.auth.getUser();if(r&&r.data&&r.data.user){await loadWorkforce();await ensure();}}catch(e){}
-    window.sb.auth.onAuthStateChange(function(event,session){
-      if(session&&session.user){setTimeout(async function(){try{await loadWorkforce();await ensure();}catch(e){}},50);}
-      if(event==='SIGNED_OUT'){userId=null;window.__crm1WorkforceV2Injected=null;}
-    });
-    setTimeout(ensure,800);
-  }
+  function addButton(id,label){var nav=document.getElementById('nav');if(!nav)return;var b=document.getElementById(id);if(!b){b=document.createElement('button');b.type='button';b.id=id;b.textContent=label;b.dataset.crm1WorkforceNav='1';nav.appendChild(b);}b.onclick=function(e){if(e){e.preventDefault();e.stopPropagation();}if(id==='crm1W2Nav_crm1W2Queue'){openQueue();return;}if(id==='crm1W2Nav_crm1W2Assignment'){openAssignment();return;}var target=id.replace('crm1W2Nav_','');if(window.crm1WorkforceOpenPage){window.crm1WorkforceOpenPage(target);return;}setTimeout(function(){if(window.crm1WorkforceOpenPage)window.crm1WorkforceOpenPage(target);},150);};}
+  async function profileFor(user){try{var r=await window.sb.from('profiles').select('id,full_name,email,role,is_active').eq('id',user.id).maybeSingle();return r.data||null;}catch(e){return null;}}
+  async function ensure(){if(!window.sb||!window.sb.auth)return;var r=await window.sb.auth.getUser();var user=r&&r.data&&r.data.user;if(!user){userId=null;return;}userId=user.id;var p=await profileFor(user);if(!p)return;canonicalizeNav();if(managerRoles.indexOf(p.role)>=0){addButton('crm1W2Nav_crm1W2Manager','📊 Manager Control');addButton('crm1W2Nav_crm1W2Import','📥 Lead Import');addButton('crm1W2Nav_crm1W2Assignment','👥 Lead Assignment');}if(agentRoles.indexOf(p.role)>=0)addButton('crm1W2Nav_crm1W2Queue',"📞 Today's Calling Queue");}
+  function observe(){if(navObserverStarted)return;navObserverStarted=true;var start=function(){var nav=document.getElementById('nav');if(!nav)return;new MutationObserver(function(){setTimeout(ensure,50);}).observe(nav,{childList:true,subtree:true});ensure();};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();}
+  function loadWorkforce(){if(window.__crm1WorkforceV2Injected)return Promise.resolve();window.__crm1WorkforceV2Injected='loading';return new Promise(function(resolve,reject){var s=document.createElement('script');s.src='./crm1-workforce-v2.js?v=8';s.async=false;s.onload=function(){window.__crm1WorkforceV2Injected='loaded';setTimeout(ensure,120);resolve();};s.onerror=function(){window.__crm1WorkforceV2Injected=null;reject(new Error('CRM1 workforce module failed to load'));};document.head.appendChild(s);});}
+  async function start(){for(var i=0;i<80;i++){if(window.sb&&window.sb.auth)break;await wait(250);}if(!window.sb||!window.sb.auth)return;observe();try{var r=await window.sb.auth.getUser();if(r&&r.data&&r.data.user){await loadWorkforce();await ensure();}}catch(e){}window.sb.auth.onAuthStateChange(function(event,session){if(session&&session.user){setTimeout(async function(){try{await loadWorkforce();await ensure();}catch(e){}},50);}if(event==='SIGNED_OUT'){userId=null;window.__crm1WorkforceV2Injected=null;}});setTimeout(ensure,800);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
