@@ -25,33 +25,31 @@ jobs:
           from pathlib import Path
           p = Path('crm1/index.html')
           text = p.read_text(encoding='utf-8')
-          old = '<script src="./advanced-business-layer.js"></script>'
-          new = '<script src="./advanced-business-layer.js?v=5"></script>'
+          new = '<script src="./advanced-business-layer.js?v=6"></script>'
           if new in text:
-              print('Advanced layer loader already cache-busted.')
+              print('Advanced layer loader already cache-busted to v6.')
+          elif '<script src="./advanced-business-layer.js?v=5"></script>' in text:
+              text = text.replace('<script src="./advanced-business-layer.js?v=5"></script>', new, 1)
+              p.write_text(text, encoding='utf-8')
+              print('Updated advanced layer loader to cache-busted v6.')
           elif '<script src="./advanced-business-layer.js?v=4"></script>' in text:
               text = text.replace('<script src="./advanced-business-layer.js?v=4"></script>', new, 1)
               p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v5.')
+              print('Updated advanced layer loader to cache-busted v6.')
           elif '<script src="./advanced-business-layer.js?v=3"></script>' in text:
               text = text.replace('<script src="./advanced-business-layer.js?v=3"></script>', new, 1)
               p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v5.')
+              print('Updated advanced layer loader to cache-busted v6.')
           elif '<script src="./advanced-business-layer.js?v=2"></script>' in text:
               text = text.replace('<script src="./advanced-business-layer.js?v=2"></script>', new, 1)
               p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v5.')
-          elif old in text:
-              text = text.replace(old, new, 1)
+              print('Updated advanced layer loader to cache-busted v6.')
+          elif '<script src="./advanced-business-layer.js"></script>' in text:
+              text = text.replace('<script src="./advanced-business-layer.js"></script>', new, 1)
               p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v5.')
+              print('Injected cache-busted advanced layer loader v6.')
           else:
-              marker = '</body>'
-              if marker not in text:
-                  raise SystemExit('CRM1 index.html does not contain </body>; refusing unsafe modification')
-              text = text.replace(marker, new + '\n' + marker, 1)
-              p.write_text(text, encoding='utf-8')
-              print('Injected cache-busted advanced layer loader.')
+              raise SystemExit('CRM1 advanced loader not found; refusing unsafe modification')
 
       - name: Commit integration if changed
         shell: bash
