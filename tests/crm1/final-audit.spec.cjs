@@ -71,13 +71,17 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
   test('all authenticated roles: Lead Management is hidden and Lead / Enquiry Manager is the single lead workspace', async ({ page }) => {
     for (const [key] of roles) {
       await login(page, key);
-      const leadManagement = page.locator('#nav button').filter({ hasText: /^\s*Lead Management\s*$/i });
-      expect(await leadManagement.filter({ visible: true }).count(), `${key} should not show duplicate Lead Management`).toBe(0);
-      const leadEnquiry = page.locator('#nav button').filter({ hasText: /Lead \/ Enquiry Manager/i }).filter({ visible: true });
-      expect(await leadEnquiry.count(), `${key} should show Lead / Enquiry Manager`).toBeGreaterThan(0);
-      await leadEnquiry.first().click();
+      const visibleNavLabels = await page.locator('#nav button').evaluateAll(btns => btns.filter(b => b.offsetParent !== null).map(b => (b.textContent || '').replace(/\s+/g, ' ').trim()));
+      expect(visibleNavLabels.filter(x => /^Lead Management$/i.test(x)), `${key} should not show duplicate Lead Management`).toHaveLength(0);
+      expect(visibleNavLabels.filter(x => /Lead \/ Enquiry Manager/i.test(x)).length, `${key} should show Lead / Enquiry Manager`).toBeGreaterThan(0);
+      const leadEnquiry = page.locator('#nav button').filter({ hasText: /Lead \/ Enquiry Manager/i });
+      let clicked = false;
+      for (let i = 0; i < await leadEnquiry.count(); i++) {
+        if (await leadEnquiry.nth(i).isVisible().catch(() => false)) { await leadEnquiry.nth(i).click(); clicked = true; break; }
+      }
+      expect(clicked, `${key} Lead / Enquiry Manager is not clickable`).toBeTruthy();
       await page.waitForTimeout(800);
-      await expect(page.locator('main')).toContainText(/Lead \/ Enquiry Manager|Agent Lead Work Queue|Lead Management/i);
+      await expect(page.locator('main')).toContainText(/Lead \/ Enquiry Manager|Agent Lead Work Queue/i);
       await page.locator('#logout').click();
       await page.waitForTimeout(400);
     }
