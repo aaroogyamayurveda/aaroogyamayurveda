@@ -37,9 +37,6 @@ function hardenCallConsole(){
   const log=document.createElement('button');log.type='button';log.id='crm2ParityLogManual';log.className='btn alt';log.textContent='Log Manual Call';actions.append(start,timer,end,log);
   const delegate=id=>$(id)?.click();start.onclick=()=>delegate('crm2CallStart');end.onclick=()=>delegate('crm2CallEnd');log.onclick=()=>window.dispatchEvent(new CustomEvent('crm2ParityManualCall'));
   const sync=()=>{const realStart=$('crm2CallStart'),realEnd=$('crm2CallEnd'),realTimer=$('crm2CallTimer');if(realStart)start.disabled=realStart.disabled;if(realEnd)end.disabled=realEnd.disabled;if(realTimer)timer.textContent=realTimer.textContent||'00:00'};
-  // This observer intentionally watches only child/text mutations. The sync function
-  // changes button disabled state, so observing attributes here creates a self-triggering
-  // MutationObserver loop and freezes the renderer during the Create Order click.
   const observer=new MutationObserver(sync);observer.observe(panel,{subtree:true,childList:true,characterData:true});sync();
 }
 
