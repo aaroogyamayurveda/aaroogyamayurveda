@@ -27,3 +27,4 @@ ok('Sales Order dispositions are seeded',read('../supabase/migrations/2026091200
 ok('database discount freeze migration is present',read('../supabase/migrations/20260911123000_crm2_freeze_order_discount_zero.sql').includes('trg_crm2_force_zero_order_discount')&&read('../supabase/migrations/20260911123000_crm2_freeze_order_discount_zero.sql').includes('new.discount := 0'));
 ok('desktop and mobile parity layouts are defined',css.includes('grid-template-columns:1fr 1fr')&&css.includes('@media(max-width:650px)'));
 console.log('CRM2 Create Order final CRM1 parity smoke suite passed');
+
