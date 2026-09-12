@@ -6,11 +6,25 @@
   var wait=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
   var userId=null, navObserverStarted=false;
 
+  function canonicalizeNav(){
+    var nav=document.getElementById('nav');
+    if(!nav)return;
+    var keep={
+      'Lead Assignment':'crm1W2Nav_crm1W2Assignment',
+      'Lead Import':'crm1W2Nav_crm1W2Import',
+      'Manager Control':'crm1W2Nav_crm1W2Manager',
+      "Today's Calling Queue":'crm1W2Nav_crm1W2Queue'
+    };
+    Array.prototype.slice.call(nav.querySelectorAll('button')).forEach(function(b){
+      var t=String(b.textContent||'').replace(/\s+/g,' ').trim();
+      var id=keep[t];
+      if(id && b.id!==id)b.remove();
+    });
+  }
+
   function addButton(id,label){
     var nav=document.getElementById('nav');
-    if(!nav || !document.getElementById(id)){
-      if(!nav)return;
-    }
+    if(!nav)return;
     var b=document.getElementById(id);
     if(!b){
       b=document.createElement('button');
@@ -19,9 +33,8 @@
       nav.appendChild(b);
     }
     b.onclick=function(){
-      var pageId=id.replace('crm1W2Nav_','');
-      if(window.crm1WorkforceOpenPage){window.crm1WorkforceOpenPage(pageId);return;}
-      setTimeout(function(){if(window.crm1WorkforceOpenPage)window.crm1WorkforceOpenPage(pageId);},150);
+      if(window.crm1WorkforceOpenPage){window.crm1WorkforceOpenPage(id.replace('crm1W2Nav_',''));return;}
+      setTimeout(function(){if(window.crm1WorkforceOpenPage)window.crm1WorkforceOpenPage(id.replace('crm1W2Nav_',''));},150);
     };
   }
 
@@ -37,14 +50,15 @@
     var r=await window.sb.auth.getUser();
     var user=r&&r.data&&r.data.user;
     if(!user){userId=null;return;}
-    if(userId!==user.id){userId=user.id;}
+    userId=user.id;
     var p=await profileFor(user); if(!p)return;
+    canonicalizeNav();
     if(managerRoles.indexOf(p.role)>=0){
       addButton('crm1W2Nav_crm1W2Manager','📊 Manager Control');
       addButton('crm1W2Nav_crm1W2Import','📥 Lead Import');
       addButton('crm1W2Nav_crm1W2Assignment','👥 Lead Assignment');
     }
-    if(agentRoles.indexOf(p.role)>=0) addButton('crm1W2Nav_crm1W2Queue','📞 Today\'s Calling Queue');
+    if(agentRoles.indexOf(p.role)>=0) addButton('crm1W2Nav_crm1W2Queue',"📞 Today's Calling Queue");
   }
 
   function observe(){
