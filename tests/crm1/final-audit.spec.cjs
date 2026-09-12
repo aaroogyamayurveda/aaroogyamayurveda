@@ -22,13 +22,16 @@ async function login(page, key) {
   await page.waitForTimeout(2500);
 }
 
-async function navButtons(page) {
+function navButtons(page) {
   return page.locator('#nav .crm1-nav-group-body > button');
 }
 
 async function clickIfPresent(page, pattern) {
-  const btn = page.locator('#nav button').filter({ hasText: pattern }).first();
-  if (await btn.count() && await btn.isVisible().catch(() => false)) {
+  const buttons = page.locator('#nav button').filter({ hasText: pattern });
+  const count = await buttons.count();
+  for (let i = 0; i < count; i++) {
+    const btn = buttons.nth(i);
+    if (!await btn.isVisible().catch(() => false)) continue;
     await btn.click();
     await page.waitForTimeout(1000);
     return true;
@@ -92,6 +95,9 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     await expect(page.locator('#crm1StartCall')).toBeVisible();
     await expect(page.locator('#crm1EndCall')).toBeVisible();
     await expect(page.locator('#crm1LogCall')).toBeVisible();
+    await expect(page.locator('#crm1EndCall')).toHaveCount(1);
+    await expect(page.locator('#crm1CallConsole #crm1EndCall')).toHaveCount(1);
+    await expect(page.locator('#crm1TelephonyBar')).toHaveCount(0);
 
     // Do not place a real call or submit a real order in the final audit.
     // Verify the disposition/order lifecycle controls exist and are reachable.
@@ -172,7 +178,7 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
       await login(page, key);
       const opened = await clickIfPresent(page, orderPattern);
       expect(opened, `${key} order page missing`).toBeTruthy();
-      await expect(page.locator('main table').first()).toBeVisible();
+      await expect(page.locator('main table').filter({ visible: true }).first()).toBeVisible();
       const text = await page.locator('main').innerText();
       expect(text).toMatch(/Customer/i);
       expect(text).toMatch(/Mobile/i);
