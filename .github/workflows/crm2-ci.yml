@@ -35,12 +35,12 @@ jobs:
         run: node crm2/tests/create-order-parity-smoke.js
 
   browser:
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_sha == github.sha
     needs: smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      CRM2_BASE_URL: https://aaroogyamayurveda.in/crm2/
+      CRM2_BASE_URL: https://aaroogyamayurveda.in/crm2/?qa_sha=${{ github.event.workflow_run.head_sha }}
       CRM2_SUPERADMIN_EMAIL: ${{ secrets.CRM2_SUPERADMIN_EMAIL }}
       CRM2_SUPERADMIN_PASSWORD: ${{ secrets.CRM2_SUPERADMIN_PASSWORD }}
       CRM2_ADMIN_EMAIL: ${{ secrets.CRM2_ADMIN_EMAIL }}
@@ -65,6 +65,8 @@ jobs:
       CRM2_MIS_PASSWORD: ${{ secrets.CRM2_MIS_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -88,6 +90,11 @@ jobs:
             if [ -z "${!name:-}" ]; then echo "Missing GitHub Actions secret: $name"; missing=1; fi
           done
           test "$missing" -eq 0
+      - name: Verify browser target matches deployed SHA
+        run: |
+          test "${{ github.event.workflow_run.head_sha }}" = "${{ github.sha }}"
+          git rev-parse HEAD
+          test "$(git rev-parse HEAD)" = "${{ github.event.workflow_run.head_sha }}"
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
@@ -112,5 +119,5 @@ jobs:
             crm2/tests/playwright-report/
           if-no-files-found: ignore
 
-# Browser QA intentionally runs from workflow_run after GitHub Pages deployment,
-# so it verifies the actual deployed main site instead of an old live deployment.
+# Browser QA intentionally runs only after a successful Pages deployment for the exact
+# current main SHA, then checks out that same deployed SHA for deterministic verification.
