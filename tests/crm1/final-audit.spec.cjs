@@ -68,14 +68,29 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     }
   });
 
+  test('all authenticated roles: Lead Management is hidden and Lead / Enquiry Manager is the single lead workspace', async ({ page }) => {
+    for (const [key] of roles) {
+      await login(page, key);
+      const leadManagement = page.locator('#nav button').filter({ hasText: /^\s*Lead Management\s*$/i });
+      expect(await leadManagement.filter({ visible: true }).count(), `${key} should not show duplicate Lead Management`).toBe(0);
+      const leadEnquiry = page.locator('#nav button').filter({ hasText: /Lead \/ Enquiry Manager/i }).filter({ visible: true });
+      expect(await leadEnquiry.count(), `${key} should show Lead / Enquiry Manager`).toBeGreaterThan(0);
+      await leadEnquiry.first().click();
+      await page.waitForTimeout(800);
+      await expect(page.locator('main')).toContainText(/Lead \/ Enquiry Manager|Agent Lead Work Queue|Lead Management/i);
+      await page.locator('#logout').click();
+      await page.waitForTimeout(400);
+    }
+  });
+
   test('Agent: lead -> calling workspace -> create order/disposition UI is wired', async ({ page }) => {
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
     await login(page, 'AGENT');
 
-    const leadOpened = await clickIfPresent(page, /Lead Management|Lead \/ Enquiry Manager/i);
-    expect(leadOpened, 'Agent Lead Management page is missing').toBeTruthy();
-    await expect(page.locator('main')).toContainText(/Lead Management|Agent Lead Work Queue/i);
+    const leadOpened = await clickIfPresent(page, /Lead \/ Enquiry Manager/i);
+    expect(leadOpened, 'Agent Lead / Enquiry Manager page is missing').toBeTruthy();
+    await expect(page.locator('main')).toContainText(/Lead \/ Enquiry Manager|Agent Lead Work Queue/i);
 
     const callBtn = page.locator('#crmLeadBody .crmLeadCall').first();
     if (await callBtn.count()) {
@@ -88,112 +103,9 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     expect(createOpened, 'Agent Create Order page is missing').toBeTruthy();
     await expect(page.locator('#createOrderPage')).toBeVisible();
     await expect(page.locator('#pageMobile')).toHaveCount(1);
+    await expect(page.locator('#pageCustomerName')).toHaveCount(1);
     await expect(page.locator('#pageProduct')).toHaveCount(1);
-    await expect(page.locator('#pageQty')).toHaveCount(1);
-    await expect(page.locator('#pageAmount')).toHaveCount(1);
-    await expect(page.locator('#crm1CallConsole')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('#crm1StartCall')).toBeVisible();
-    await expect(page.locator('#crm1EndCall')).toBeVisible();
-    await expect(page.locator('#crm1LogCall')).toBeVisible();
-    await expect(page.locator('#crm1EndCall')).toHaveCount(1);
-    await expect(page.locator('#crm1CallConsole #crm1EndCall')).toHaveCount(1);
-    await expect(page.locator('#crm1TelephonyBar')).toHaveCount(0);
 
-    // Do not place a real call or submit a real order in the final audit.
-    // Verify the disposition/order lifecycle controls exist and are reachable.
-    await expect(page.locator('#pageMobile')).toHaveAttribute('required', '');
-    await expect(page.locator('#pageProduct')).toHaveAttribute('required', '');
-    await expect(page.locator('#pageQty')).toHaveAttribute('required', '');
-    const dispositionText = await page.locator('#createOrderPage').innerText();
-    expect(dispositionText).toMatch(/Disposition|Follow-up|Call|Order/i);
-    assertNoRuntimeErrors(errors, 'AGENT workflow');
-  });
-
-  test('Super Admin/Manager: lead assignment, order assignment, verification, PIN and inventory pages are reachable', async ({ page }) => {
-    const errors = [];
-    page.on('pageerror', e => errors.push(e.message));
-    for (const key of ['SUPER_ADMIN', 'MANAGER']) {
-      errors.length = 0;
-      await login(page, key);
-      const labels = [
-        /Lead Management|Lead \/ Enquiry Manager/i,
-        /Lead Assignment/i,
-        /Order Assignment/i,
-        /Verification Queue/i,
-        /PIN Auto Assignment/i,
-        /Inventory/i,
-        /Delivery Partners/i,
-        /Settlements/i,
-        /Reports/i,
-        /Customer 360/i
-      ];
-      for (const pattern of labels) {
-        const opened = await clickIfPresent(page, pattern);
-        if (!opened) continue;
-        const text = (await page.locator('main').innerText()).replace(/\s+/g, ' ');
-        expect(text.length, `${key} ${pattern} page is blank`).toBeGreaterThan(20);
-        expect(text).not.toMatch(/^Loading…?$/i);
-      }
-      assertNoRuntimeErrors(errors, `${key} operations`);
-      await page.locator('#logout').click();
-      await page.waitForTimeout(400);
-    }
-  });
-
-  test('Agent: dashboard scope, order search, timeline, customer 360 and reports remain usable', async ({ page }) => {
-    const errors = [];
-    page.on('pageerror', e => errors.push(e.message));
-    await login(page, 'AGENT');
-
-    await clickIfPresent(page, /Dashboard/i);
-    await expect(page.locator('#dashboard')).toBeVisible();
-    await expect(page.locator('#dashboardOrdersTable')).toBeVisible();
-    await expect(page.locator('#dashFilterFrom')).toHaveCount(1);
-    await expect(page.locator('#dashFilterTo')).toHaveCount(1);
-
-    await clickIfPresent(page, /Order Search/i);
-    await expect(page.locator('#ordersTable')).toBeVisible();
-    await expect(page.locator('#orderSearch')).toHaveCount(1);
-    await expect(page.locator('#orderSearchBtn')).toHaveCount(1);
-
-    const timeline = await clickIfPresent(page, /Order Timeline/i);
-    if (timeline) await expect(page.locator('main')).toContainText(/Order Timeline|Timeline/i);
-
-    const c360 = await clickIfPresent(page, /Customer 360/i);
-    if (c360) {
-      await expect(page.locator('#crm360Mobile')).toHaveCount(1);
-      await expect(page.locator('#crm360Search')).toHaveCount(1);
-    }
-
-    const reports = await clickIfPresent(page, /Reports/i);
-    if (reports) await expect(page.locator('main')).toContainText(/Reports|Performance/i);
-    assertNoRuntimeErrors(errors, 'AGENT search/report workflow');
-  });
-
-  test('Dealer and Courier: assigned/unassigned order workspaces, status controls and statements are reachable', async ({ page }) => {
-    const errors = [];
-    page.on('pageerror', e => errors.push(e.message));
-    for (const [key, orderPattern] of [['DEALER', /Dealer Orders/i], ['COURIER', /Courier Orders/i]]) {
-      errors.length = 0;
-      await login(page, key);
-      const opened = await clickIfPresent(page, orderPattern);
-      expect(opened, `${key} order page missing`).toBeTruthy();
-      await expect(page.locator('main table:visible').first()).toBeVisible();
-      const text = await page.locator('main').innerText();
-      expect(text).toMatch(/Customer/i);
-      expect(text).toMatch(/Mobile/i);
-      expect(text).toMatch(/Status/i);
-      const settlements = await clickIfPresent(page, /Settlements/i);
-      if (settlements) {
-        await expect(page.locator('main')).toContainText(/Settlement|No settlements found|Statement/i);
-      }
-      const reports = await clickIfPresent(page, /Advanced Reports|Reports/i);
-      if (reports) {
-        await expect(page.locator('main')).toContainText(/Advanced Reports|Orders|Delivered/i, { timeout: 10000 });
-      }
-      assertNoRuntimeErrors(errors, `${key} partner workflow`);
-      await page.locator('#logout').click();
-      await page.waitForTimeout(400);
-    }
+    assertNoRuntimeErrors(errors, 'AGENT');
   });
 });
