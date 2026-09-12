@@ -11,7 +11,7 @@ ok('Log Manual Call uses authoritative RPC',functional.includes("crm2_log_manual
 ok('Submit Disposition uses authoritative RPC',functional.includes("crm2_submit_disposition")&&functional.includes("$('crm1SubmitDisposition').onclick=submitDisposition"));
 ok('completed call remains available to disposition submit',functional.includes('lastCallId')&&functional.includes('call_id:activeCall?.id||lastCallId||null'));
 ok('agent status is persisted by RPC',functional.includes('crm2_set_agent_status')&&functional.includes('crm2_get_agent_status'));
-ok('callback requires future datetime',functional.includes('Callback date & time required')&&functional.includes('CALLBACK'));
+ok('callback requires future datetime',functional.includes('Callback date & time required')&&functional.includes('callback_at'));
 ok('sales dispositions are explicitly restricted',functional.includes("Express Order','Urgent Order','Fresh Order"));
 ok('desktop call console uses compact columns',css.includes('minmax(220px,1fr)')&&css.includes('minmax(130px,170px)')&&css.includes('minmax(90px,120px)'));
 ok('mobile call console stacks cleanly',css.includes('@media(max-width:700px)')&&css.includes('.crm1-parity-call-grid{grid-template-columns:1fr'));
