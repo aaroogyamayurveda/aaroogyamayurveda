@@ -6,6 +6,8 @@
   var wait=function(ms){return new Promise(function(r){setTimeout(r,ms);});};
   var userId=null, navObserverStarted=false;
 
+  function navText(b){return String(b&&b.textContent||'').replace(/\s+/g,' ').trim().replace(/^[^A-Za-z]+/,'').trim();}
+
   function canonicalizeNav(){
     var nav=document.getElementById('nav');
     if(!nav)return;
@@ -15,10 +17,12 @@
       'Manager Control':'crm1W2Nav_crm1W2Manager',
       "Today's Calling Queue":'crm1W2Nav_crm1W2Queue'
     };
-    Array.prototype.slice.call(nav.querySelectorAll('button')).forEach(function(b){
-      var t=String(b.textContent||'').replace(/\s+/g,' ').trim();
-      var id=keep[t];
-      if(id && b.id!==id)b.remove();
+    Object.keys(keep).forEach(function(label){
+      var matches=Array.prototype.filter.call(nav.querySelectorAll('button'),function(b){return navText(b)===label;});
+      if(matches.length){
+        matches.forEach(function(b,i){if(i>0)b.remove();});
+        if(matches[0].id!==keep[label])matches[0].remove();
+      }
     });
   }
 
@@ -76,7 +80,7 @@
     if(window.__crm1WorkforceV2Injected)return Promise.resolve();
     window.__crm1WorkforceV2Injected='loading';
     return new Promise(function(resolve,reject){
-      var s=document.createElement('script'); s.src='./crm1-workforce-v2.js?v=5'; s.async=false;
+      var s=document.createElement('script'); s.src='./crm1-workforce-v2.js?v=6'; s.async=false;
       s.onload=function(){window.__crm1WorkforceV2Injected='loaded';setTimeout(ensure,120);resolve();};
       s.onerror=function(){window.__crm1WorkforceV2Injected=null;reject(new Error('CRM1 workforce module failed to load'));};
       document.head.appendChild(s);
