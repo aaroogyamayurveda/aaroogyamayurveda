@@ -175,9 +175,8 @@ test('agent: create order workspace is available from Orders and Calling', async
   test.skip(!c.email || !c.password, 'Missing agent secrets');
   await login(page, c.email, c.password);
   await sideButton(page, 'Orders').click();
-  await expect(page.getByRole('button', { name: /Create Order|Fast Order/i }).first()).toBeVisible({ timeout: 8_000 });
-  const createAction = page.getByRole('button', { name: /Create Order|Fast Order/i }).first();
-  await createAction.click();
+  await expect(page.getByRole('button', { name: /Create Order/i }).first()).toBeVisible({ timeout: 8_000 });
+  await page.getByRole('button', { name: /Create Order/i }).first().click();
   await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
   for (const label of ['Customer Name *', 'Mobile Number *', 'Pincode *', 'State *', 'City *', 'Area / Post *', 'Complete Delivery Address *', 'Product *', 'Quantity *', 'Payment Mode *']) await expect(page.getByText(label, { exact: true })).toBeVisible({ timeout: 5_000 });
   await sideButton(page, 'Calling').click();
@@ -189,7 +188,7 @@ test('agent: create order workspace exposes CRM1-equivalent address and call con
   test.skip(!c.email || !c.password, 'Missing agent secrets');
   await login(page, c.email, c.password);
   await sideButton(page, 'Orders').click();
-  const createAction = page.getByRole('button', { name: /Create Order|Fast Order/i }).first();
+  const createAction = page.getByRole('button', { name: /Create Order/i }).first();
   await createAction.click();
   await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
   await expect(page.locator('#crm2OrderMobile')).toHaveAttribute('inputmode', 'numeric');
@@ -206,12 +205,12 @@ test('agent: persisted active call restores calling controls after refresh', asy
   test.skip(!c.email || !c.password, 'Missing agent secrets');
   await login(page, c.email, c.password);
   await sideButton(page, 'Orders').click();
-  await page.getByRole('button', { name: /Create Order|Fast Order/i }).first().click();
+  await page.getByRole('button', { name: /Create Order/i }).first().click();
   await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
   await page.evaluate(() => localStorage.setItem('crm2ActiveCall', JSON.stringify({ id: '00000000-0000-0000-0000-000000000001', startedAt: new Date(Date.now() - 5000).toISOString(), agentId: null })));
   await sideButton(page, 'Dashboard').click();
   await sideButton(page, 'Orders').click();
-  await page.getByRole('button', { name: /Create Order|Fast Order/i }).first().click();
+  await page.getByRole('button', { name: /Create Order/i }).first().click();
   await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
   await expect(page.locator('#crm2CallStart')).toBeDisabled();
   await expect(page.locator('#crm2CallEnd')).toBeEnabled();
@@ -224,7 +223,7 @@ test('agent: create order workspace has no horizontal overflow on desktop and mo
   test.skip(!c.email || !c.password, 'Missing agent secrets');
   await login(page, c.email, c.password);
   await sideButton(page, 'Orders').click();
-  await page.getByRole('button', { name: /Create Order|Fast Order/i }).first().click();
+  await page.getByRole('button', { name: /Create Order/i }).first().click();
   await expect(page.locator('[data-crm2-create-order]')).toBeVisible({ timeout: 8_000 });
   for (const width of [390, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
