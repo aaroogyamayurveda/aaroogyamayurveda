@@ -16,3 +16,4 @@ function next(){
 function boot(){next();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+/* integration trigger: cache-bust v6 deployment after authoritative CRM1 fixes */
