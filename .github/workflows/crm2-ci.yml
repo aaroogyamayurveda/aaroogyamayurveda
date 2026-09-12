@@ -9,6 +9,9 @@ on:
     paths:
       - 'crm2/**'
       - '.github/workflows/crm2-ci.yml'
+  workflow_run:
+    workflows: ["Deploy GitHub Pages"]
+    types: [completed]
   workflow_dispatch:
 
 jobs:
@@ -32,6 +35,7 @@ jobs:
         run: node crm2/tests/create-order-parity-smoke.js
 
   browser:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
     needs: smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -108,4 +112,5 @@ jobs:
             crm2/tests/playwright-report/
           if-no-files-found: ignore
 
-# CRM2 verification trigger: keep browser QA tied to the current main deployment.
+# Browser QA intentionally runs from workflow_run after GitHub Pages deployment,
+# so it verifies the actual deployed main site instead of an old live deployment.
