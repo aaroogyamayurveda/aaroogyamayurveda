@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - 'crm2/**'
+      - 'supabase/migrations/**'
       - '.github/workflows/crm2-ci.yml'
   pull_request:
     paths:
       - 'crm2/**'
+      - 'supabase/migrations/**'
       - '.github/workflows/crm2-ci.yml'
   workflow_run:
     workflows: ["Deploy GitHub Pages"]
@@ -28,11 +30,14 @@ jobs:
           node --check crm2/modules/create-order-ui.js
           node --check crm2/modules/create-order-calling.js
           node --check crm2/modules/create-order-crm1-parity.js
+          node --check crm2/modules/create-order-functional.js
           node --check crm2/ui-modern.js
       - name: Run CRM2 smoke suite
         run: node crm2/tests/smoke.js
       - name: Run Create Order CRM1 parity smoke suite
         run: node crm2/tests/create-order-parity-smoke.js
+      - name: Run Create Order functional smoke suite
+        run: node crm2/tests/create-order-functional-smoke.js
 
   browser:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_sha == github.sha
