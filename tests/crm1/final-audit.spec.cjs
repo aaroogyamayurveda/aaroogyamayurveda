@@ -178,7 +178,7 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
       await login(page, key);
       const opened = await clickIfPresent(page, orderPattern);
       expect(opened, `${key} order page missing`).toBeTruthy();
-      await expect(page.locator('main table').filter({ visible: true }).first()).toBeVisible();
+      await expect(page.locator('main table:visible').first()).toBeVisible();
       const text = await page.locator('main').innerText();
       expect(text).toMatch(/Customer/i);
       expect(text).toMatch(/Mobile/i);
