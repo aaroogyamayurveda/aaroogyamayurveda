@@ -1,0 +1,16 @@
+/* CRM1 final UI integrity watchdog: validates existing authoritative renderers without creating a competing renderer. */
+(function(){
+'use strict';
+if(window.__crm1FinalUiIntegrityWatchdogV1)return;
+window.__crm1FinalUiIntegrityWatchdogV1=true;
+function text(x){return String(x==null?'':x).replace(/\s+/g,' ').trim()}
+function role(){var p=window.profile||window.currentProfile||window.crmProfile,r=text(p&&p.role).toLowerCase();if(r)return r;var n=text(document.getElementById('nav')&&document.getElementById('nav').textContent).toLowerCase();if(n.indexOf('dealer orders')>=0)return'dealer';if(n.indexOf('courier orders')>=0)return'courier_manager';return''}
+function partnerRole(){var r=role();return r==='dealer'||r==='courier'||r==='courier_manager'}
+function normalizeLeadNav(){var r=role(),leadCap=['super_admin','management','order_manager','agent'].indexOf(r)>=0;if(!leadCap)return;var nav=document.getElementById('nav');if(!nav)return;var matches=[];nav.querySelectorAll('button,a,[role="button"]').forEach(function(el){var t=text(el.textContent),c=t.replace(/^🧲\s*/,'').trim();if(/^lead management$/i.test(c)||/^lead \/ enquiry manager$/i.test(c))matches.push(el)});if(!matches.length)return;matches[0].textContent='🧲 Lead / Enquiry Manager';for(var i=1;i<matches.length;i++)matches[i].remove()}
+function partnerTableValid(){if(!partnerRole())return true;var p=document.getElementById(role()==='dealer'?'dealers':'courierOrders');if(!p||!p.classList.contains('active'))return true;var t=p.querySelector('#crm1PartnerFinalTable');if(!t)return false;var h=text(t.querySelector('thead')&&t.querySelector('thead').innerText);return /Product/i.test(h)&&/Date\s*\/\s*Time/i.test(h)&&/Update/i.test(h)&&/Print Order/i.test(h)}
+function restorePartner(){if(!partnerRole()||partnerTableValid())return;var p=document.getElementById(role()==='dealer'?'dealers':'courierOrders');if(!p)return;var t=p.querySelector('#crm1PartnerFinalTable');if(t)t.remove();var nav=document.getElementById('nav');if(!nav)return;var label=role()==='dealer'?'dealer orders':'courier orders';var b=Array.prototype.find.call(nav.querySelectorAll('button,a,[role="button"]'),function(el){return text(el.textContent).toLowerCase().indexOf(label)>=0});if(b)b.click()}
+function normalizeAgentDisplay(){var r=role();if(r!=='agent')return;var info=text(document.getElementById('userInfo')&&document.getElementById('userInfo').textContent),name=info.split(/\s*•\s*/)[0].trim();if(!name)return;var body=document.getElementById('dashboardOrdersBody');if(!body)return;body.querySelectorAll('tr').forEach(function(row){if(row.cells&&row.cells.length>=8){var cell=row.cells[4];if(cell)cell.textContent=name}})}
+function check(){normalizeLeadNav();restorePartner();normalizeAgentDisplay()}
+function boot(){check();var main=document.querySelector('main.main')||document.body;new MutationObserver(function(){check()}).observe(main,{childList:true,subtree:true,characterData:true});var nav=document.getElementById('nav');if(nav)new MutationObserver(function(){normalizeLeadNav()}).observe(nav,{childList:true,subtree:true,characterData:true});}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
