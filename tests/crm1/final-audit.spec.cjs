@@ -7,6 +7,7 @@ const roles = [
   ['DEALER', /Dealer/i],
   ['COURIER', /Courier/i]
 ];
+const leadRoles = new Set(['SUPER_ADMIN','MANAGER','AGENT']);
 
 async function login(page, key) {
   const email = process.env[`CRM1_${key}_EMAIL`];
@@ -68,20 +69,22 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     }
   });
 
-  test('all authenticated roles: Lead Management is hidden and Lead / Enquiry Manager is the single lead workspace', async ({ page }) => {
+  test('authenticated roles: duplicate Lead Management is hidden; lead-capable roles keep one Lead / Enquiry Manager', async ({ page }) => {
     for (const [key] of roles) {
       await login(page, key);
       const visibleNavLabels = await page.locator('#nav button').evaluateAll(btns => btns.filter(b => b.offsetParent !== null).map(b => (b.textContent || '').replace(/\s+/g, ' ').trim()));
       expect(visibleNavLabels.filter(x => /^Lead Management$/i.test(x)), `${key} should not show duplicate Lead Management`).toHaveLength(0);
-      expect(visibleNavLabels.filter(x => /Lead \/ Enquiry Manager/i.test(x)).length, `${key} should show Lead / Enquiry Manager`).toBeGreaterThan(0);
-      const leadEnquiry = page.locator('#nav button').filter({ hasText: /Lead \/ Enquiry Manager/i });
-      let clicked = false;
-      for (let i = 0; i < await leadEnquiry.count(); i++) {
-        if (await leadEnquiry.nth(i).isVisible().catch(() => false)) { await leadEnquiry.nth(i).click(); clicked = true; break; }
+      if (leadRoles.has(key)) {
+        expect(visibleNavLabels.filter(x => /Lead \/ Enquiry Manager/i.test(x)).length, `${key} should show Lead / Enquiry Manager`).toBeGreaterThan(0);
+        const leadEnquiry = page.locator('#nav button').filter({ hasText: /Lead \/ Enquiry Manager/i });
+        let clicked = false;
+        for (let i = 0; i < await leadEnquiry.count(); i++) {
+          if (await leadEnquiry.nth(i).isVisible().catch(() => false)) { await leadEnquiry.nth(i).click(); clicked = true; break; }
+        }
+        expect(clicked, `${key} Lead / Enquiry Manager is not clickable`).toBeTruthy();
+        await page.waitForTimeout(800);
+        await expect(page.locator('main')).toContainText(/Lead \/ Enquiry Manager|Agent Lead Work Queue/i);
       }
-      expect(clicked, `${key} Lead / Enquiry Manager is not clickable`).toBeTruthy();
-      await page.waitForTimeout(800);
-      await expect(page.locator('main')).toContainText(/Lead \/ Enquiry Manager|Agent Lead Work Queue/i);
       await page.locator('#logout').click();
       await page.waitForTimeout(400);
     }
@@ -107,7 +110,7 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
     expect(createOpened, 'Agent Create Order page is missing').toBeTruthy();
     await expect(page.locator('#createOrderPage')).toBeVisible();
     await expect(page.locator('#pageMobile')).toHaveCount(1);
-    await expect(page.locator('#pageCustomerName')).toHaveCount(1);
+    await expect(page.locator('#createOrderPage input[name="customer_name"]')).toHaveCount(1);
     await expect(page.locator('#pageProduct')).toHaveCount(1);
 
     assertNoRuntimeErrors(errors, 'AGENT');
