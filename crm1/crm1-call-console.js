@@ -1,6 +1,6 @@
 /* CRM1 Agent Call Console - manual personal-phone calling mode; CRM records lifecycle only. */
 (async()=>{'use strict';
-const $=id=>document.getElementById(id);let db=window.sb,me=null,agentCfg=null,active=null,timer=null;
+const $=id=>document.getElementById(id);let db=window.sb,me=null,agentCfg=null,active=null,timer=null,ready=false;
 const digits=v=>String(v||'').replace(/\D/g,'').slice(-10);
 function toast(m){const t=$('toast');if(t){t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2600)}else console.log(m)}
 function bar(){
@@ -79,12 +79,13 @@ function setCallButtonState(inCall){
    start.className='btn alt';start.disabled=true;start.style.opacity='.55';start.style.filter='grayscale(.2)';start.style.pointerEvents='none';start.style.background='#fff';start.style.color='var(--g)';
    end.className='btn red';end.disabled=false;end.style.opacity='1';end.style.filter='none';end.style.pointerEvents='auto';end.style.background='var(--red)';end.style.color='#fff';
  }else{
-   start.className='btn';start.disabled=false;start.style.opacity='1';start.style.filter='none';start.style.pointerEvents='auto';start.style.background='var(--g)';start.style.color='#fff';
+   start.className='btn';start.disabled=!ready;start.style.opacity=ready?'1':'.55';start.style.filter='none';start.style.pointerEvents=ready?'auto':'none';start.style.background='var(--g)';start.style.color='#fff';
    end.className='btn alt';end.disabled=true;end.style.opacity='1';end.style.filter='none';end.style.pointerEvents='auto';end.style.background='#fff';end.style.color='var(--g)';
  }
 }
 async function startCall(){
  const mobile=digits($('crm1DialNumber').value||$('pageMobile')?.value);
+ if(!ready){toast('CRM call console is still loading');return}
  if(!/^[6-9]\d{9}$/.test(mobile)){toast('Enter valid 10 digit mobile');return}
  if(active)return;
  syncManualNumberToOrder(mobile);
@@ -112,8 +113,9 @@ async function endCall(){
  window.dispatchEvent(new CustomEvent('crm1CallEnded',{detail:{call_id:finished.id,mobile:finished.mobile,duration_seconds:seconds,provider:'manual_phone',manual_phone:true}}));
 }
 async function boot(){
+ bar();
  for(let i=0;i<30&&!db;i++){await new Promise(r=>setTimeout(r,100));db=window.sb}if(!db)return;
- const {data:{user}}=await db.auth.getUser();if(!user)return;me=user;bar();loadAgent();
+ const {data:{user}}=await db.auth.getUser();if(!user)return;me=user;ready=true;setCallButtonState(false);loadAgent();
  const sync=()=>syncMobileFromOrder();
  document.addEventListener('crm1WorkspaceCall',e=>{const n=digits(e.detail?.number);if(n)syncManualNumberToOrder(n)});
  document.addEventListener('crm1LeadCallReady',e=>{const n=digits(e.detail?.mobile);if(!n)return;syncManualNumberToOrder(n);const d=$('crm1DialNumber');if(d)d.value=n});
