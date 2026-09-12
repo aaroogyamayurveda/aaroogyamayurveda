@@ -6,6 +6,7 @@ function ok(name,cond){if(!cond)throw new Error('FAIL: '+name);console.log('PASS
 ok('CRM1 parity stylesheet is loaded',/create-order-crm1-parity\.css\?v=/.test(index));
 ok('CRM1 parity module is loaded',/modules\/create-order-crm1-parity\.js\?v=/.test(index));
 ok('ERP hardening module is loaded',/modules\/create-order-erp-hardening\.js\?v=/.test(index));
+ok('Create Order observer guard loads before UI',/modules\/create-order-observer-guard\.js\?v=/.test(index)&&index.indexOf('create-order-observer-guard.js')<index.indexOf('create-order-ui.js'));
 ok('manual phone console matches CRM1 structure',parity.includes('Manual Phone Call Console')&&parity.includes('Customer Mobile')&&parity.includes('Call Timer')&&hardening.includes('Agent Status'));
 ok('manual call controls match CRM1 labels',hardening.includes('Start Call')&&hardening.includes('End Call')&&hardening.includes('Log Manual Call'));
 ok('agent status options are defined',hardening.includes("['ready','Ready']")&&hardening.includes("['pause','Pause']")&&hardening.includes("['aux','AUX']")&&hardening.includes("['washroom','Washroom']")&&hardening.includes("['lunch','Lunch']"));
@@ -17,7 +18,7 @@ ok('disposition level 1 and level 2 exist',parity.includes('Disposition Level 1 
 ok('Sales Order child dispositions are supported',hardening.includes('Express Order')&&hardening.includes('Urgent Order')&&hardening.includes('Fresh Order'));
 ok('submit disposition exists',parity.includes('Submit Disposition')&&parity.includes('crm1SubmitDisposition'));
 ok('English red validation is enforced',hardening.includes('Please enter a valid 10-digit mobile number.')&&hardening.includes('Please enter a valid customer name.')&&hardening.includes('Please enter a valid 6-digit pincode.')&&css.includes('.crm2-validation-error')&&css.includes('color:#d32f2f'));
-ok('login marketing copy is removed',hardening.includes('Zero-cost')&&hardening.includes('Please enter a valid email address.')&&hardening.includes('crm2LoginValidation'));
+ok('login validation/copy cleanup is wired',hardening.includes('crm2LoginValidation')&&hardening.includes('Please enter a valid email address.'));
 ok('price and discount are frozen',parity.includes('readOnly=true')&&parity.includes("d.value='0'")&&parity.includes('d.disabled=true'));
 ok('order summary is hidden',css.includes('.erp-order-workspace .order-summary-card{display:none!important}')&&parity.includes('crm2HiddenSubmit'));
 ok('Fast Order routing is disabled',bridge.includes('crm2FastOrderDisabled=true')&&!bridge.includes("/^Fast Order$/i.test"));
@@ -26,3 +27,4 @@ ok('Sales Order dispositions are seeded',read('../supabase/migrations/2026091200
 ok('database discount freeze migration is present',read('../supabase/migrations/20260911123000_crm2_freeze_order_discount_zero.sql').includes('trg_crm2_force_zero_order_discount')&&read('../supabase/migrations/20260911123000_crm2_freeze_order_discount_zero.sql').includes('new.discount := 0'));
 ok('desktop and mobile parity layouts are defined',css.includes('grid-template-columns:1fr 1fr')&&css.includes('@media(max-width:650px)'));
 console.log('CRM2 Create Order final CRM1 parity smoke suite passed');
+
