@@ -1,0 +1,2 @@
+/* CRM1 final print label normalization. */
+(function(){'use strict';if(window.__crm1PrintLabelFinal)return;window.__crm1PrintLabelFinal=true;function fix(){document.querySelectorAll('.crm1FinalPrint,.crm1PartnerPrint').forEach(function(b){b.textContent='Print Order'})}function start(){fix();new MutationObserver(fix).observe(document.body,{childList:true,subtree:true});setInterval(fix,700)}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start()})();
