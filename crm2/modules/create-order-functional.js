@@ -72,7 +72,16 @@ async function loadDisposition(){
 }
 
 async function setStatus(value){const {error}=await sb.rpc('crm2_set_agent_status',{p_status:value});if(error){setMessage('Unable to save agent status: '+(error.message||'database error'));return false}return true}
-async function loadStatus(){const select=$('crm1ParityAgentStatus');if(!select)return;const {data}=await sb.rpc('crm2_get_agent_status');const row=Array.isArray(data)?data[0]:data;if(row?.status)select.value=row.status;if(!select.dataset.functionalStatusBound){select.dataset.functionalStatusBound='1';select.addEventListener('change',async()=>{const value=select.value;select.disabled=true;const ok=await setStatus(value);select.disabled=false;if(ok)setCallStatus(`Agent status: ${value}`)})}}
+async function loadStatus(){
+  const select=$('crm1ParityAgentStatus');if(!select)return;
+  if(!select.dataset.functionalStatusBound){
+    select.dataset.functionalStatusBound='1';
+    select.addEventListener('change',async()=>{select.dataset.statusDirty='1';const value=select.value;select.disabled=true;const ok=await setStatus(value);select.disabled=false;if(ok)setCallStatus(`Agent status: ${value}`)});
+  }
+  const {data}=await sb.rpc('crm2_get_agent_status');
+  const row=Array.isArray(data)?data[0]:data;
+  if(row?.status&&!select.dataset.statusDirty)select.value=row.status;
+}
 
 function collectPayload(){const l1=$('crm1Disposition1'),l2=$('crm1Disposition2'),product=$('crm2OrderProduct')?.selectedOptions?.[0];const quantity=Math.max(1,Number($('crm2OrderQty')?.value)||1),price=Math.max(0,Number(product?.dataset?.price||$('crm2OrderPrice')?.value||0));return {mobile:mobile(),name:text($('crm2OrderName')?.value),alternate_mobile:normalizeMobile($('crm2OrderAlt')?.value||''),age:text($('crm2OrderAge')?.value),gender:text($('crm2OrderGender')?.value),address:text($('crm2OrderAddress')?.value),post:text($('crm2OrderPost')?.value),city:text($('crm2OrderCity')?.value),state:text($('crm2OrderState')?.value),pincode:text($('crm2OrderPincode')?.value),product_id:product?.value||'',product_name:product?.dataset?.name||'',sku:product?.dataset?.sku||'',quantity,unit_price:price,payment_mode:$('crm2OrderPayment')?.value||'COD',source:$('crm2OrderSource')?.value||'Manual',campaign_id:$('crm2OrderCampaign')?.value||'',remarks:text($('crm2OrderRemarks')?.value),disposition_l1_id:l1?.value||'',disposition_l2_id:l2?.value||'',call_id:activeCall?.id||lastCallId||null,duration_seconds:activeCall?Math.round((Date.now()-new Date(activeCall.startedAt).getTime())/1000):Number($('crm2CallDuration')?.value||0),callback_at:$('crm2FunctionalCallbackAt')?.value||'',callback_priority:$('crm2FunctionalCallbackPriority')?.value||'normal'}}
 
