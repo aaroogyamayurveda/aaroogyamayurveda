@@ -28,8 +28,9 @@
       var u=(await window.sb.auth.getUser())?.data?.user;
       if(!u?.id)return null;
       var p=(await window.sb.from('profiles').select('id,role,full_name').eq('id',u.id).maybeSingle())?.data;
-      if(p?.role==='agent')return {id:u.id,name:p.full_name||((document.getElementById('userInfo')?.innerText)||'').split('•')[0].trim()};
-      if(window.profile?.role==='agent')return {id:u.id,name:p?.full_name||((document.getElementById('userInfo')?.innerText)||'').split('•')[0].trim()};
+      var visibleName=((document.getElementById('userInfo')?.innerText)||'').split('•')[0].trim();
+      if(p?.role==='agent')return {id:u.id,name:visibleName||p.full_name||''};
+      if(window.profile?.role==='agent')return {id:u.id,name:visibleName||p?.full_name||''};
     }catch(e){}
     return null;
   }
@@ -43,13 +44,7 @@
       }).join('')||'<tr><td colspan="8" class="empty">No orders</td></tr>';
     }
     var lower=function(o){return String(o.order_status||'').toLowerCase()};
-    var vals={
-      sOrders:rows.length,
-      sPending:rows.filter(function(o){return ['new','pending','confirmed','dealer_pending','assigned','hold'].indexOf(lower(o))>=0}).length,
-      sTransit:rows.filter(function(o){return lower(o)==='in_transit'}).length,
-      sDelivered:rows.filter(function(o){return lower(o)==='delivered'}).length,
-      sCancelled:rows.filter(function(o){return lower(o)==='cancelled'}).length
-    };
+    var vals={sOrders:rows.length,sPending:rows.filter(function(o){return ['new','pending','confirmed','dealer_pending','assigned','hold'].indexOf(lower(o))>=0}).length,sTransit:rows.filter(function(o){return lower(o)==='in_transit'}).length,sDelivered:rows.filter(function(o){return lower(o)==='delivered'}).length,sCancelled:rows.filter(function(o){return lower(o)==='cancelled'}).length};
     Object.keys(vals).forEach(function(id){var el=document.getElementById(id);if(el)el.textContent=vals[id]});
     var label=document.getElementById('sOrdersLabel');if(label)label.textContent='Orders ('+r.label+')';
   }
