@@ -9,6 +9,7 @@ on:
 permissions:
   contents: read
 
+# CRM1 authenticated regression gate: runs on every main push.
 jobs:
   crm1-live:
     runs-on: ubuntu-latest
