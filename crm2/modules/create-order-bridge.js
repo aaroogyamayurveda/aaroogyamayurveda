@@ -8,7 +8,8 @@ export function crm2OpenCreateOrderBridge(leadId=null){
 }
 document.addEventListener('click',event=>{
   const btn=event.target?.closest?.('button');
-  if(!btn||!/^Fast Order$/i.test(btn.textContent?.trim()||''))return;
+  const legacyLabel=(btn?.textContent||'').trim().toLowerCase();
+  if(!btn||legacyLabel!=='fast order')return;
   event.preventDefault();
   event.stopImmediatePropagation();
   crm2OpenCreateOrderBridge(btn.dataset.leadId||null);
