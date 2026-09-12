@@ -26,21 +26,25 @@ jobs:
           p = Path('crm1/index.html')
           text = p.read_text(encoding='utf-8')
           old = '<script src="./advanced-business-layer.js"></script>'
-          new = '<script src="./advanced-business-layer.js?v=4"></script>'
+          new = '<script src="./advanced-business-layer.js?v=5"></script>'
           if new in text:
               print('Advanced layer loader already cache-busted.')
+          elif '<script src="./advanced-business-layer.js?v=4"></script>' in text:
+              text = text.replace('<script src="./advanced-business-layer.js?v=4"></script>', new, 1)
+              p.write_text(text, encoding='utf-8')
+              print('Updated advanced layer loader to cache-busted v5.')
           elif '<script src="./advanced-business-layer.js?v=3"></script>' in text:
               text = text.replace('<script src="./advanced-business-layer.js?v=3"></script>', new, 1)
               p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v4.')
+              print('Updated advanced layer loader to cache-busted v5.')
           elif '<script src="./advanced-business-layer.js?v=2"></script>' in text:
               text = text.replace('<script src="./advanced-business-layer.js?v=2"></script>', new, 1)
               p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v4.')
+              print('Updated advanced layer loader to cache-busted v5.')
           elif old in text:
               text = text.replace(old, new, 1)
               p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v4.')
+              print('Updated advanced layer loader to cache-busted v5.')
           else:
               marker = '</body>'
               if marker not in text:
