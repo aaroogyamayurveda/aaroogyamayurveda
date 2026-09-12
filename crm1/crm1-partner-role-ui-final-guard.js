@@ -1,8 +1,8 @@
 /* CRM1 final partner-order authority: prevents legacy Dealer/Courier tables from winning. */
 (function(){
 'use strict';
-if(window.__crm1PartnerRoleUiFinalGuardV3)return;
-window.__crm1PartnerRoleUiFinalGuardV3=true;
+if(window.__crm1PartnerRoleUiFinalGuardV4)return;
+window.__crm1PartnerRoleUiFinalGuardV4=true;
 var FINAL={delivered:1,rto:1,cancelled:1},STATUS=['new','assigned','confirmed','dealer_pending','packed','dispatched','in_transit','delivered','hold','cancelled','rto'];
 var esc=function(x){return String(x==null?'':x).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]})};
 var money=function(x){return '₹'+Number(x||0).toLocaleString('en-IN')};
@@ -22,7 +22,10 @@ body.querySelectorAll('.crm1PartnerPrint').forEach(function(b){b.onclick=functio
 }
 var rendering=false;
 async function load(){if(rendering||!partner()||!window.sb)return;var r=currentRole(),page=pageFor(r);if(!page)return;rendering=true;try{var rows=await fetchOrders(r);render(page,r,rows)}catch(e){console.error('CRM1 partner orders',e)}finally{rendering=false}}
-function enforce(){if(!partner())return;var nav=document.getElementById('nav');if(nav)nav.querySelectorAll('button,a,[role="button"]').forEach(function(el){var t=text(el.textContent).toLowerCase();if(t==='order timeline'||t.indexOf('order timeline')>=0||t==='conversion workbench'||t.indexOf('conversion workbench')>=0)el.remove()});document.querySelectorAll('.crm1PartnerSave,.crm1-partner-save').forEach(function(el){el.remove()})}
+window.crm1PartnerFinalReload=load;
+function disableLegacyPartnerLoaders(){if(!partner())return;if(window.loadDealerOrders&&window.loadDealerOrders!==window.crm1PartnerFinalLegacyNoop)window.loadDealerOrders=window.crm1PartnerFinalLegacyNoop;if(window.loadCourierOrders&&window.loadCourierOrders!==window.crm1PartnerFinalLegacyNoop)window.loadCourierOrders=window.crm1PartnerFinalLegacyNoop}
+window.crm1PartnerFinalLegacyNoop=function(){};
+function enforce(){if(!partner())return;disableLegacyPartnerLoaders();var nav=document.getElementById('nav');if(nav)nav.querySelectorAll('button,a,[role="button"]').forEach(function(el){var t=text(el.textContent).toLowerCase();if(t==='order timeline'||t.indexOf('order timeline')>=0||t==='conversion workbench'||t.indexOf('conversion workbench')>=0)el.remove()});document.querySelectorAll('.crm1PartnerSave,.crm1-partner-save').forEach(function(el){el.remove()})}
 function needsRender(){if(!partner())return false;var p=pageFor(currentRole());if(!(p&&p.classList.contains('active')))return false;var t=p.querySelector('#crm1PartnerFinalTable');if(!t)return true;var h=text(t.querySelector('thead')&&t.querySelector('thead').innerText);return !/Product/i.test(h)||!/Update/i.test(h)||!/Print Order/i.test(h)||!/Date\s*\/\s*Time/i.test(h)}
 function boot(){enforce();var nav=document.getElementById('nav');if(nav)new MutationObserver(function(){enforce();if(needsRender())setTimeout(load,50)}).observe(nav,{childList:true,subtree:true,characterData:true});var main=document.querySelector('main.main')||document.body;new MutationObserver(function(){enforce();if(needsRender())setTimeout(load,80)}).observe(main,{childList:true,subtree:true});document.addEventListener('click',function(e){var b=e.target&&e.target.closest?e.target.closest('#nav button,#nav a,[role="button"]'):null;if(!b)return;var t=text(b.textContent).toLowerCase();if((currentRole()==='dealer'&&t.indexOf('orders')>=0)||(currentRole()==='courier_manager'&&t.indexOf('orders')>=0))setTimeout(load,80);setTimeout(enforce,0)},true);if(window.sb&&window.sb.auth)window.sb.auth.onAuthStateChange(function(){setTimeout(function(){enforce();if(partner())load()},150)});setTimeout(load,300);setTimeout(load,1200);setTimeout(load,2500)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
