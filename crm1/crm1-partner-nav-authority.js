@@ -1,8 +1,8 @@
 /* CRM1 partner navigation authority: Dealer/Courier get Orders + Settlements + Advanced Reports + Notifications only. */
 (function(){
   'use strict';
-  if(window.__crm1PartnerNavAuthorityV2)return;
-  window.__crm1PartnerNavAuthorityV2=true;
+  if(window.__crm1PartnerNavAuthorityV3)return;
+  window.__crm1PartnerNavAuthorityV3=true;
   var restricted=/^(?:.*\b)?order timeline(?:\b.*)?$|^(?:.*\b)?conversion workbench(?:\b.*)?$/i;
   function text(el){return String(el&&el.textContent||'').replace(/\s+/g,' ').trim();}
   function role(){
@@ -15,12 +15,6 @@
     if(n.indexOf('courier orders')>=0)return 'courier_manager';
     return '';
   }
-  function removeRestricted(nav){
-    if(!nav)return;
-    Array.prototype.slice.call(nav.querySelectorAll('button,a,[role="button"]')).forEach(function(el){
-      if(restricted.test(text(el)))el.remove();
-    });
-  }
   function openPage(id){
     var target=document.getElementById(id);
     if(!target)return false;
@@ -30,44 +24,50 @@
     var nav=document.getElementById('nav');
     if(nav){
       Array.prototype.forEach.call(nav.querySelectorAll('button'),function(b){
-        if(/advanced reports/i.test(text(b)))b.classList.add('active');
+        var t=text(b);
+        if((id==='advancedReports'&&/advanced reports/i.test(t))||(id==='settlements'&&/^.*settlements.*$/i.test(t)))b.classList.add('active');
       });
     }
     window.scrollTo(0,0);
     return true;
   }
-  function bindAdvanced(b){
-    if(!b||b.dataset.crm1PartnerAdvancedBound==='1')return;
-    b.dataset.crm1PartnerAdvancedBound='1';
+  function removeRestricted(nav){
+    if(!nav)return;
+    Array.prototype.slice.call(nav.querySelectorAll('button,a,[role="button"]')).forEach(function(el){
+      if(restricted.test(text(el)))el.remove();
+    });
+  }
+  function bindButton(b,id,mark){
+    if(!b)return;
+    if(b.dataset.crm1PartnerBound===mark)return;
+    b.dataset.crm1PartnerBound=mark;
     b.onclick=function(e){
       e.preventDefault();
       e.stopPropagation();
-      if(openPage('advancedReports')){
-        setTimeout(function(){
-          var root=document.getElementById('crm1ARDetailedRoot');
-          if(!root && typeof window.showPage==='function')window.showPage('advancedReports');
-        },80);
-      }
+      openPage(id);
     };
   }
-  function ensureAdvanced(nav){
+  function ensureSingle(nav,pattern,id,mark,label){
     if(!nav)return;
-    var found=Array.prototype.find.call(nav.querySelectorAll('button'),function(b){return /advanced reports/i.test(text(b));});
-    if(found){bindAdvanced(found);return;}
-    var b=document.createElement('button');
-    b.type='button';
-    b.id='crm1PartnerAdvancedReportsNav';
-    b.textContent='📈 Advanced Reports';
-    b.dataset.crm1PartnerNav='1';
-    nav.appendChild(b);
-    bindAdvanced(b);
+    var found=Array.prototype.filter.call(nav.querySelectorAll('button'),function(b){return pattern.test(text(b));});
+    if(!found.length){
+      var b=document.createElement('button');
+      b.type='button';
+      b.textContent=label;
+      b.dataset.crm1PartnerNav='1';
+      nav.appendChild(b);
+      found=[b];
+    }
+    bindButton(found[0],id,mark);
+    found.slice(1).forEach(function(b){b.remove();});
   }
   function enforce(){
     if(!role())return;
     var nav=document.getElementById('nav');
     if(!nav)return;
     removeRestricted(nav);
-    ensureAdvanced(nav);
+    ensureSingle(nav,/advanced reports/i,'advancedReports','advanced-v3','📈 Advanced Reports');
+    ensureSingle(nav,/settlements/i,'settlements','settlements-v3','💰 Settlements');
   }
   function boot(){
     var nav=document.getElementById('nav');
