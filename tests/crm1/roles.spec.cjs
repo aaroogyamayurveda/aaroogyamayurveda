@@ -90,15 +90,27 @@ test('Courier role: assigned orders show customer, mobile, product, status updat
   await assertPartnerRole(page, 'COURIER', 'Courier Orders');
 });
 
-test('Generate Invoice menu is visible after the Other menu', async ({ page }) => {
-  await login(page, 'SUPER_ADMIN');
-  const groups = page.locator('#nav .crm1-nav-group');
-  const otherIndex = await groups.evaluateAll(items => items.findIndex(x => x.dataset.group === 'other'));
-  const invoice = page.locator('#nav button').filter({ hasText: /Generate Invoice/i }).first();
-  await expect(invoice).toBeVisible();
-  const invoiceGroupIndex = await invoice.locator('xpath=ancestor::div[contains(@class,"crm1-nav-group")]').evaluate(el => {
-    const all = Array.from(el.parentElement.querySelectorAll('.crm1-nav-group'));
-    return all.indexOf(el);
+for (const [key, label] of roles) {
+  test(`${label} sees Generate Invoice after Other menu and opens invoice workspace`, async ({ page }) => {
+    const errors=[];
+    page.on('pageerror', e=>errors.push(e.message));
+    await login(page, key);
+    const nav = page.locator('#nav');
+    const groups = nav.locator('.crm1-nav-group');
+    const otherIndex = await groups.evaluateAll(items => items.findIndex(x => x.dataset.group === 'other'));
+    const invoiceGroup = nav.locator('.crm1-nav-group[data-group="generate-invoice"]');
+    await expect(invoiceGroup).toBeVisible();
+    const invoiceIndex = await groups.evaluateAll(items => items.findIndex(x => x.dataset.group === 'generate-invoice'));
+    expect(otherIndex).toBeGreaterThanOrEqual(0);
+    expect(invoiceIndex).toBeGreaterThan(otherIndex);
+    const invoice = invoiceGroup.locator('button').filter({ hasText: /Generate Invoice/i }).first();
+    await expect(invoice).toBeVisible();
+    await invoice.click();
+    await expect(page.locator('#crm1GenerateInvoicePage')).toBeVisible();
+    await expect(page.locator('#crm1InvoiceSearch')).toBeVisible();
+    await expect(page.locator('#crm1InvoiceFind')).toBeVisible();
+    await expect(page.locator('#crm1InvoicePrint')).toBeVisible();
+    await expect(page.locator('#crm1InvoiceExcel')).toBeVisible();
+    expect(errors, errors.join('\n')).toEqual([]);
   });
-  expect(invoiceGroupIndex).toBeGreaterThan(otherIndex);
-});
+}
