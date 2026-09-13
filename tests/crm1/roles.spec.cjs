@@ -89,3 +89,16 @@ test('Dealer role: assigned orders show customer, mobile, product, status update
 test('Courier role: assigned orders show customer, mobile, product, status update, own settlements and reports', async ({ page }) => {
   await assertPartnerRole(page, 'COURIER', 'Courier Orders');
 });
+
+test('Generate Invoice menu is visible after the Other menu', async ({ page }) => {
+  await login(page, 'SUPER_ADMIN');
+  const groups = page.locator('#nav .crm1-nav-group');
+  const otherIndex = await groups.evaluateAll(items => items.findIndex(x => x.dataset.group === 'other'));
+  const invoice = page.locator('#nav button').filter({ hasText: /Generate Invoice/i }).first();
+  await expect(invoice).toBeVisible();
+  const invoiceGroupIndex = await invoice.locator('xpath=ancestor::div[contains(@class,"crm1-nav-group")]').evaluate(el => {
+    const all = Array.from(el.parentElement.querySelectorAll('.crm1-nav-group'));
+    return all.indexOf(el);
+  });
+  expect(invoiceGroupIndex).toBeGreaterThan(otherIndex);
+});
