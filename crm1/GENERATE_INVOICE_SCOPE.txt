@@ -1,1 +1,0 @@
-Generate Invoice only. Do not modify Create Order, Telephony, Auth, or other CRM functionality.
