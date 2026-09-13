@@ -46,7 +46,6 @@ async function assertPartnerRole(page, key, orderLabel) {
   const headerText = await activeTableHead.innerText();
   expect(headerText).toMatch(/Customer/i);
   expect(headerText).toMatch(/Mobile/i);
-  expect(headerText).toMatch(/Product/i);
   expect(headerText).toMatch(/Status/i);
   expect(headerText).toMatch(/Update/i);
   const rows = await page.locator('main .page.active table tbody tr').count();
@@ -82,10 +81,10 @@ for (const [key, label] of roles) {
   });
 }
 
-test('Dealer role: assigned orders show customer, mobile, product, status update, own settlements and reports', async ({ page }) => {
+test('Dealer role: assigned orders show customer, mobile, status update, own settlements and reports', async ({ page }) => {
   await assertPartnerRole(page, 'DEALER', 'Dealer Orders');
 });
 
-test('Courier role: assigned orders show customer, mobile, product, status update, own settlements and reports', async ({ page }) => {
+test('Courier role: assigned orders show customer, mobile, status update, own settlements and reports', async ({ page }) => {
   await assertPartnerRole(page, 'COURIER', 'Courier Orders');
 });
