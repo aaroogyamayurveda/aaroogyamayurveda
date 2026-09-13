@@ -112,4 +112,14 @@ test.describe('CRM1 FINAL END-TO-END AUDIT', () => {
 
     assertNoRuntimeErrors(errors, 'AGENT');
   });
+
+  test('Agent: Create Order call console is ready on the first post-login load', async ({ page }) => {
+    await login(page, 'AGENT');
+    const createOpened = await clickIfPresent(page, /Create Order/i);
+    expect(createOpened, 'Agent Create Order page is missing').toBeTruthy();
+    await expect(page.locator('#createOrderPage')).toHaveClass(/active/);
+    await expect(page.locator('#crm1CallConsole')).toHaveCount(1);
+    await expect(page.locator('#crm1StartCall')).toBeEnabled();
+    await expect(page.locator('#crm1StartCall')).toHaveCSS('pointer-events', 'auto');
+  });
 });
