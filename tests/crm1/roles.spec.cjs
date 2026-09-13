@@ -26,6 +26,7 @@ async function login(page, key) {
     throw new Error(`${key} login did not open CRM1 app. LoginMessage=${loginMessage || '(empty)'}; URL=${page.url()}`);
   }
   await expect(page.locator('#userInfo')).not.toHaveText(/^(|undefined|null)$/i);
+  await expect(page.locator('#crm1NavOrderDocuments')).toHaveCount(0);
   await page.waitForTimeout(1800);
 }
 
@@ -48,6 +49,7 @@ async function assertPartnerRole(page, key, orderLabel) {
   expect(headerText).toMatch(/Mobile/i);
   expect(headerText).toMatch(/Status/i);
   expect(headerText).toMatch(/Update/i);
+  expect(headerText).not.toMatch(/Print Order/i);
   const rows = await page.locator('main .page.active table tbody tr').count();
   expect(rows).toBeGreaterThanOrEqual(1);
   const settlementBtn = nav.locator('button').filter({hasText:/Settlements/i}).first();
