@@ -131,7 +131,7 @@ test('Generate Invoice searches an existing order and supports Print/PDF and Exc
   const popup=await popupPromise;
   await popup.waitForLoadState();
   await expect(popup).toHaveTitle(/Invoice 39/i);
-  await expect(popup.locator('body')).toContainText('Order / No|Order No|Invoice / Order No');
+  await expect(popup.locator('body')).toContainText(/Order\s*\/\s*Order No|Order No|Invoice\s*\/\s*Order No/i);
   await popup.close();
   const downloadPromise=page.waitForEvent('download');
   await page.locator('#crm1InvoiceExcel').click();
