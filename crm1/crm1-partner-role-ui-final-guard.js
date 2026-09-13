@@ -1,68 +1,19 @@
-/* CRM1 partner role UI final guard.
-   Runs last so secondary navigation/renderers cannot restore restricted UI. */
+/* CRM1 authoritative Dealer/Courier Orders renderer v9. */
 (function(){
-  'use strict';
-  if(window.__crm1PartnerRoleUiFinalGuard)return;
-  window.__crm1PartnerRoleUiFinalGuard=true;
-
-  function text(x){return String(x==null?'':x).replace(/\s+/g,' ').trim().toLowerCase();}
-  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]});}
-  function roleNow(){
-    var r=text(window.profile&&window.profile.role);
-    if(r==='dealer'||r==='courier_manager')return r;
-    var nav=document.getElementById('nav');
-    var n=text(nav&&nav.textContent);
-    if(n.indexOf('dealer orders')>=0)return 'dealer';
-    if(n.indexOf('courier orders')>=0)return 'courier_manager';
-    return '';
-  }
-  function isPartner(){return !!roleNow();}
-  function hide(el){if(!el)return;el.classList.add('hidden');el.setAttribute('aria-hidden','true');el.style.setProperty('display','none','important');}
-  function buttonLabel(el){return text((el&&el.textContent)||'');}
-  function restricted(t){return t==='order timeline'||t.indexOf('order timeline')>=0||t==='conversion workbench'||t.indexOf('conversion workbench')>=0;}
-  function money(v){return '₹'+Number(v||0).toLocaleString('en-IN');}
-  function fmt(v){try{return new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}).format(new Date(v));}catch(e){return '-';}}
-  function statusOptions(current){var a=['new','assigned','confirmed','dealer_pending','in_transit','delivered','rto','cancelled','hold'];current=text(current)||'new';if(a.indexOf(current)<0)a.unshift(current);return a.map(function(v){return '<option value="'+esc(v)+'"'+(v===current?' selected':'')+'>'+esc(v)+'</option>';}).join('');}
-
-  function enforce(){
-    if(!isPartner())return;
-    var nav=document.getElementById('nav');
-    if(nav)Array.prototype.slice.call(nav.querySelectorAll('button,a,[role="button"]')).forEach(function(el){if(restricted(buttonLabel(el)))el.remove();});
-    ['timeline','conversionWorkbench'].forEach(function(id){hide(document.getElementById(id));});
-    var settlements=document.getElementById('settlements');
-    if(settlements){settlements.querySelectorAll('[data-crm1-settlement-generate="1"]').forEach(hide);Array.prototype.slice.call(settlements.querySelectorAll('.panel,section,div')).forEach(function(el){if(/^generate settlement\b/.test(buttonLabel(el)))hide(el);});}
-  }
-
-  async function renderPartnerOrders(page,role){
-    if(!page||!window.sb)return;
-    var u=await window.sb.auth.getUser();var me=u&&u.data&&u.data.user;if(!me)return;
-    var q=window.sb.from('orders').select('id,order_no,order_status,total_amount,order_date,dealer_id,courier_manager_id,customers(customer_name,mobile),order_items(quantity,qty,products(product_name))').order('order_date',{ascending:false}).limit(500);
-    if(role==='dealer'){
-      var d=await window.sb.from('dealers').select('id').eq('user_id',me.id).maybeSingle();
-      q=q.eq('dealer_id',d&&d.data?d.data.id:'00000000-0000-0000-0000-000000000000');
-    }else q=q.eq('courier_manager_id',me.id);
-    var r=await q;if(r.error)throw r.error;var rows=r.data||[];
-    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});page.classList.add('active');
-    page.innerHTML='<div class="title"><div><h2>'+(role==='dealer'?'Dealer Orders':'Courier Orders')+'</h2><div class="sub">Only orders assigned to your account</div></div></div><div class="panel" data-crm1-partner-orders="1"><div class="tablewrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Mobile</th><th>Product</th><th>Amount</th><th>Date / Time</th><th>Status</th><th>Update</th></tr></thead><tbody>'+rows.map(function(o){var items=Array.isArray(o.order_items)?o.order_items:[];var products=items.length?items.map(function(i){return esc((i.products&&(i.products.product_name||i.products.name))||'Product')+' × '+Number(i.quantity||i.qty||0);}).join('<br>'):'-';return '<tr data-order-id="'+esc(o.id)+'"><td>#'+esc(o.order_no)+'</td><td>'+esc(o.customers&&o.customers.customer_name||'-')+'</td><td>'+esc(o.customers&&o.customers.mobile||'-')+'</td><td>'+products+'</td><td>'+money(o.total_amount)+'</td><td>'+esc(fmt(o.order_date))+'</td><td><span class="pill">'+esc(o.order_status||'new')+'</span></td><td><select class="crm1PartnerStatus" data-id="'+esc(o.id)+'">'+statusOptions(o.order_status)+'</select> <button type="button" class="crm1-mini crm1PartnerSave" data-id="'+esc(o.id)+'">Save</button></td></tr>';}).join('')+(rows.length?'':'<tr><td colspan="8" class="empty">No assigned orders</td></tr>')+'</tbody></table></div></div>';
-    page.querySelectorAll('.crm1PartnerSave').forEach(function(b){b.onclick=async function(){var id=b.getAttribute('data-id'),s=page.querySelector('.crm1PartnerStatus[data-id="'+id+'"]');if(!s)return;b.disabled=true;try{var z=await window.sb.from('orders').update({order_status:s.value}).eq('id',id);if(z.error)throw z.error;var pill=b.closest('tr').querySelector('.pill');if(pill)pill.textContent=s.value;if(window.toast)window.toast('Order status updated');}catch(e){alert(e.message||String(e));}finally{b.disabled=false;}};});
-  }
-
-  function partnerPage(role){var active=document.querySelector('.page.active');if(active)return active;var want=role==='dealer'?'dealer orders':'courier orders';return Array.prototype.find.call(document.querySelectorAll('.page'),function(p){return text(p.textContent).indexOf(want)>=0;})||null;}
-  function queuePartnerRender(role){var tries=0;var timer=setInterval(function(){var p=partnerPage(role);if(p){clearInterval(timer);renderPartnerOrders(p,role).catch(function(e){console.warn('CRM1 partner order render failed',e);});return;}if(++tries>20)clearInterval(timer);},50);}
-
-  function boot(){
-    enforce();
-    var nav=document.getElementById('nav');
-    if(nav)new MutationObserver(function(){enforce();}).observe(nav,{childList:true,subtree:true,characterData:true});
-    var main=document.querySelector('main.main')||document.body;
-    new MutationObserver(function(){enforce();}).observe(main,{childList:true,subtree:true});
-    document.addEventListener('click',function(e){
-      if(!isPartner())return;var b=e.target&&e.target.closest&&e.target.closest('button,a,[role="button"]');if(!b)return;var t=buttonLabel(b);var role=roleNow();
-      if((role==='dealer'&&t.indexOf('dealer orders')>=0)||(role==='courier_manager'&&t.indexOf('courier orders')>=0)){setTimeout(function(){queuePartnerRender(role);},0);}
-      setTimeout(enforce,0);
-    },true);
-    var tries=0;var timer=setInterval(function(){enforce();if(++tries>=120)clearInterval(timer);},250);
-  }
-
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+'use strict';
+if(window.__crm1PartnerRoleUiFinalGuardV9)return;
+window.__crm1PartnerRoleUiFinalGuardV9=true;
+var FINAL={delivered:1,rto:1,cancelled:1};
+function txt(v){return String(v==null?'':v).replace(/\s+/g,' ').trim().toLowerCase()}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]})}
+function role(){var r=txt(window.profile&&window.profile.role);return r==='dealer'||r==='courier_manager'?r:''}
+function fmt(v){try{return new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}).format(new Date(v))}catch(e){return'-'}}
+function money(v){return'₹'+Number(v||0).toLocaleString('en-IN')}
+function statusOptions(current){current=txt(current)||'new';var a=['new','assigned','confirmed','dealer_pending','in_transit','delivered','rto','cancelled','hold'];if(a.indexOf(current)<0)a.unshift(current);return a.map(function(s){return'<option value="'+esc(s)+'"'+(s===current?' selected':'')+(FINAL[s]?' disabled title="Final status locked"':'')+'>'+esc(s)+'</option>'}).join('')}
+function pageFor(r){return document.getElementById(r==='dealer'?'dealers':'courierOrders')}
+function hideLegacy(){['timeline','conversionWorkbench'].forEach(function(id){var e=document.getElementById(id);if(e){e.classList.add('hidden');e.setAttribute('aria-hidden','true');e.style.setProperty('display','none','important')}});var n=document.getElementById('nav');if(n)Array.prototype.slice.call(n.querySelectorAll('button,a')).forEach(function(b){var t=txt(b.textContent);if(t.indexOf('order timeline')>=0||t.indexOf('conversion workbench')>=0)b.remove()})}
+async function render(page,r){if(!page||!window.sb)return;var a=await window.sb.auth.getUser(),me=a&&a.data&&a.data.user;if(!me)return;var q=window.sb.from('orders').select('id,order_no,order_status,total_amount,order_date,shipping_address,city,state,pin_code,payment_mode,dealer_id,courier_manager_id,courier_id,customers(customer_name,mobile,alternate_mobile,address,city,state,pincode,area_post),order_items(qty,unit_price,products(product_name))').order('order_date',{ascending:false}).limit(500);if(r==='dealer'){var d=await window.sb.from('dealers').select('id').eq('user_id',me.id).maybeSingle();q=q.eq('dealer_id',d&&d.data?d.data.id:'00000000-0000-0000-0000-000000000000')}else q=q.or('courier_manager_id.eq.'+me.id+',courier_id.eq.'+me.id);var res=await q;if(res.error)throw res.error;var rows=res.data||[];page.innerHTML='<div class="title"><div><h2>'+(r==='dealer'?'Dealer Orders':'Courier Orders')+'</h2><div class="sub">Assigned orders and delivery status</div></div></div><div class="panel"><div class="tablewrap"><table id="crm1PartnerFinalTable"><thead><tr><th>Order</th><th>Customer</th><th>Mobile</th><th>Product</th><th>Amount</th><th>Date / Time</th><th>Status</th><th>Update</th><th>Print Order</th></tr></thead><tbody>'+rows.map(function(o){var items=Array.isArray(o.order_items)?o.order_items:[];var prod=items.length?items.map(function(i){var p=i.products||{};return esc(p.product_name||'Product')+' × '+Number(i.qty||0)}).join('<br>'):'-';var st=txt(o.order_status)||'new';return'<tr data-order-id="'+esc(o.id)+'"><td>#'+esc(o.order_no)+'</td><td>'+esc(o.customers&&o.customers.customer_name||'-')+'</td><td>'+esc(o.customers&&o.customers.mobile||'-')+'</td><td>'+prod+'</td><td>'+money(o.total_amount)+'</td><td>'+esc(fmt(o.order_date))+'</td><td><span class="pill">'+esc(st)+'</span></td><td><select class="crm1PartnerStatus" data-id="'+esc(o.id)+'"'+(FINAL[st]?' disabled':'')+'>'+statusOptions(st)+'</select> <button type="button" class="crm1PartnerSave btn alt" data-id="'+esc(o.id)+'"'+(FINAL[st]?' disabled':'')+'>Update</button></td><td><button type="button" class="crm1PartnerPrint btn alt" data-id="'+esc(o.id)+'">Print Order</button></td></tr>'}).join('')+(rows.length?'':'<tr><td colspan="9" class="empty">No assigned orders</td></tr>')+'</tbody></table></div></div>';page.querySelectorAll('.crm1PartnerSave').forEach(function(b){b.onclick=async function(){var id=b.dataset.id,s=page.querySelector('.crm1PartnerStatus[data-id="'+id+'"]');if(!s||s.disabled)return;var next=txt(s.value),tr=b.closest('tr'),old=txt(tr.querySelector('.pill').textContent);if(next===old)return;if(!window.confirm('Update order status to "'+next+'"?')){s.value=old;return}b.disabled=true;try{var z=await window.sb.from('orders').update({order_status:next}).eq('id',id);if(z.error)throw z.error;tr.querySelector('.pill').textContent=next;s.disabled=!!FINAL[next];b.disabled=!!FINAL[next];if(window.toast)window.toast('Order status updated')}catch(e){alert(e.message||String(e));s.value=old;b.disabled=false}}});page.querySelectorAll('.crm1PartnerPrint').forEach(function(b){b.onclick=function(){if(window.crm1FinalPrintOrder)window.crm1FinalPrintOrder(b.dataset.id,b);else alert('PDF generator is still loading. Please try again.')}})}
+function sync(){var r=role();if(!r)return;hideLegacy();var p=pageFor(r);if(p&&!p.querySelector('#crm1PartnerFinalTable'))render(p,r).catch(function(e){console.warn('CRM1 partner Orders render failed:',e)})}
+function boot(){sync();var n=document.getElementById('nav');if(n)new MutationObserver(sync).observe(n,{childList:true,subtree:true,characterData:true});var m=document.querySelector('main.main')||document.body;new MutationObserver(sync).observe(m,{childList:true,subtree:true});var u=document.getElementById('userInfo');if(u)new MutationObserver(sync).observe(u,{childList:true,subtree:true,characterData:true});document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('#nav button');if(!b)return;var t=txt(b.textContent),r=role();if((r==='dealer'&&t.indexOf('dealer orders')>=0)||(r==='courier_manager'&&t.indexOf('courier orders')>=0))setTimeout(function(){var p=pageFor(r);if(p)render(p,r).catch(function(x){console.warn(x)})},0)},true);setInterval(sync,700)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
