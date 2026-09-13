@@ -11,6 +11,7 @@ function allowed(){var r=role();return!!r&&!EXCLUDED[r]}
 function db(){return window.sb||window.supabaseClient||null}
 function page(){var p=document.getElementById(PAGE);if(p)return p;p=document.createElement('section');p.id=PAGE;p.className='page';p.innerHTML='<div class="title"><div><h2>Order Document / Export</h2><div class="sub">Order Number या Mobile Number से order खोजें और document print/export करें.</div></div></div><div class="panel"><div class="search"><input id="crm1DocSearch" placeholder="Order Number / Mobile Number" autocomplete="off"><button class="btn" id="crm1DocSearchBtn">Search</button></div><div id="crm1DocMsg" class="sub" style="margin-top:10px"></div></div><div id="crm1DocResult"></div>';document.querySelector('.main')?.appendChild(p);return p}
 function nav(){if(!allowed())return;var n=document.getElementById('nav');if(!n||document.getElementById(NAV))return;var b=document.createElement('button');b.type='button';b.id=NAV;b.textContent='🧾 Order Document / Export';b.onclick=function(){show()};n.appendChild(b)}
+function cleanup(){var n=document.getElementById(NAV);if(n)n.remove();var p=document.getElementById(PAGE);if(p){p.classList.remove('active');p.remove()}}
 function show(){var p=page();document.querySelectorAll('.page').forEach(function(x){x.classList.remove('active')});p.classList.add('active');document.querySelectorAll('#nav button').forEach(function(x){x.classList.remove('active')});document.getElementById(NAV)?.classList.add('active');window.scrollTo(0,0)}
 function formatDate(v){if(!v)return'-';var d=new Date(v);return isNaN(d.getTime())?String(v):d.toLocaleString('en-IN')}
 function money(v){return'₹'+Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
@@ -22,7 +23,9 @@ async function pdf(o,button){if(button)button.disabled=true;try{await loadLib('h
 function loadXlsx(){return loadLib('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',function(){return!!window.XLSX})}
 async function excel(o,button){if(button)button.disabled=true;try{await loadXlsx();var d=docData(o),rows=[['Order No','Order Date','Customer','Mobile','Alternate Mobile','Address','Payment Mode','Product','Qty','Unit Price','Amount','Order Total']];d.items.forEach(function(i){rows.push([d.order,d.date,d.customer,d.mobile,d.alternate,d.address,d.payment,i.product,i.qty,i.unit,i.amount,d.total])});var ws=XLSX.utils.aoa_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Order');XLSX.writeFile(wb,'Order-'+String(d.order).replace(/[^A-Za-z0-9_-]/g,'_')+'.xlsx')}catch(e){alert('Excel export failed: '+(e.message||String(e)))}finally{if(button)button.disabled=false}}
 function bind(){if(!allowed())return;page();nav();var b=document.getElementById('crm1DocSearchBtn'),i=document.getElementById('crm1DocSearch');if(b&&!b.dataset.bound){b.dataset.bound='1';b.onclick=search;i.onkeydown=function(e){if(e.key==='Enter')search()}}}
-function boot(){bind()}
+function sync(){if(allowed())bind();else cleanup()}
+function boot(){sync()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-setTimeout(boot,1200);setTimeout(boot,3000);
+var userInfo=document.getElementById('userInfo');if(userInfo)new MutationObserver(sync).observe(userInfo,{childList:true,subtree:true,characterData:true});
+setTimeout(sync,1200);setTimeout(sync,3000);
 })();
