@@ -89,3 +89,53 @@ test('Dealer role: assigned orders show customer, mobile, product, status update
 test('Courier role: assigned orders show customer, mobile, product, status update, own settlements and reports', async ({ page }) => {
   await assertPartnerRole(page, 'COURIER', 'Courier Orders');
 });
+
+for (const [key, label] of roles) {
+  test(`${label} sees Generate Invoice after Other menu and opens invoice workspace`, async ({ page }) => {
+    const errors=[];
+    page.on('pageerror', e=>errors.push(e.message));
+    await login(page, key);
+    const nav = page.locator('#nav');
+    const groups = nav.locator('.crm1-nav-group');
+    const otherIndex = await groups.evaluateAll(items => items.findIndex(x => x.dataset.group === 'other'));
+    const invoiceGroup = nav.locator('.crm1-nav-group[data-group="generate-invoice"]');
+    await expect(invoiceGroup).toBeVisible();
+    const invoiceIndex = await groups.evaluateAll(items => items.findIndex(x => x.dataset.group === 'generate-invoice'));
+    expect(otherIndex).toBeGreaterThanOrEqual(0);
+    expect(invoiceIndex).toBeGreaterThan(otherIndex);
+    const invoice = invoiceGroup.locator('button').filter({ hasText: /Generate Invoice/i }).first();
+    await expect(invoice).toBeVisible();
+    await invoice.click();
+    await expect(page.locator('#crm1GenerateInvoicePage')).toBeVisible();
+    await expect(page.locator('#crm1InvoiceSearch')).toBeVisible();
+    await expect(page.locator('#crm1InvoiceFind')).toBeVisible();
+    await expect(page.locator('#crm1InvoicePrint')).toBeVisible();
+    await expect(page.locator('#crm1InvoiceExcel')).toBeVisible();
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+}
+
+test('Generate Invoice searches an existing order and supports Print/PDF and Excel export', async ({ page }) => {
+  const errors=[];
+  page.on('pageerror', e=>errors.push(e.message));
+  await login(page, 'SUPER_ADMIN');
+  const invoice = page.locator('#nav .crm1-nav-group[data-group="generate-invoice"] button').filter({ hasText: /Generate Invoice/i }).first();
+  await invoice.click();
+  await page.locator('#crm1InvoiceSearch').fill('39');
+  await page.locator('#crm1InvoiceFind').click();
+  await expect(page.locator('#crm1InvoiceResults')).toContainText('Order #39',{timeout:15000});
+  await expect(page.locator('#crm1InvoicePrint')).toBeEnabled();
+  await expect(page.locator('#crm1InvoiceExcel')).toBeEnabled();
+  const popupPromise=page.waitForEvent('popup');
+  await page.locator('#crm1InvoicePrint').click();
+  const popup=await popupPromise;
+  await popup.waitForLoadState();
+  await expect(popup).toHaveTitle(/Invoice 39/i);
+  await expect(popup.locator('body')).toContainText(/Order\s*\/\s*Order No|Order No|Invoice\s*\/\s*Order No/i);
+  await popup.close();
+  const downloadPromise=page.waitForEvent('download');
+  await page.locator('#crm1InvoiceExcel').click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toBe('Generate-Invoice-Export.csv');
+  expect(errors, errors.join('\n')).toEqual([]);
+});
