@@ -16,7 +16,7 @@ jobs:
   crm1-live-fresh:
     name: Fresh authenticated CRM1 tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,15 +34,17 @@ jobs:
 
       - name: Wait for deployed CRM1
         run: |
-          for i in {1..36}; do
-            if curl -fsS --max-time 10 https://aaroogyamayurveda.in/crm1/ | grep -Fq 'advanced-business-layer.js?v=6'; then
-              echo "CRM1 v6 deployment is live"
+          expected_loader='advanced-business-layer.js?v=7'
+          for i in {1..60}; do
+            html="$(curl -fsS --max-time 10 https://aaroogyamayurveda.in/crm1/ || true)"
+            if printf '%s' "$html" | grep -Fq "$expected_loader"; then
+              echo "CRM1 authoritative loader is live: $expected_loader"
               exit 0
             fi
-            echo "Waiting for CRM1 v6 deployment ($i/36)..."
+            echo "Waiting for current CRM1 deployment ($i/60)..."
             sleep 10
           done
-          echo "CRM1 v6 deployment did not become reachable"
+          echo "Current CRM1 deployment did not expose $expected_loader within the wait window"
           exit 1
 
       - name: Run authenticated role tests
