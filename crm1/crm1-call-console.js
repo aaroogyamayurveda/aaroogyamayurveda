@@ -115,8 +115,16 @@ async function endCall(){
 async function boot(){
  bar();
  for(let i=0;i<30&&!db;i++){await new Promise(r=>setTimeout(r,100));db=window.sb}if(!db)return;
- const {data:{user}}=await db.auth.getUser();if(!user)return;me=user;ready=true;setCallButtonState(false);loadAgent();
  const sync=()=>syncMobileFromOrder();
+ const activateUser=user=>{
+   if(!user){me=null;ready=false;setCallButtonState(false);return}
+   const changed=!me||me.id!==user.id;
+   me=user;ready=true;setCallButtonState(!!active);
+   if(changed)setTimeout(()=>loadAgent(),0);
+ };
+ db.auth.onAuthStateChange((_event,session)=>activateUser(session?.user||null));
+ const {data:{user}}=await db.auth.getUser();
+ activateUser(user);
  document.addEventListener('crm1WorkspaceCall',e=>{const n=digits(e.detail?.number);if(n)syncManualNumberToOrder(n)});
  document.addEventListener('crm1LeadCallReady',e=>{const n=digits(e.detail?.mobile);if(!n)return;syncManualNumberToOrder(n);const d=$('crm1DialNumber');if(d)d.value=n});
  document.addEventListener('crm1CallStarted',sync);
