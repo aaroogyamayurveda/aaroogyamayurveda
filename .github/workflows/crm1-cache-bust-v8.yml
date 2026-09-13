@@ -1,0 +1,60 @@
+name: CRM1 Cache Bust v8
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'crm1/advanced-business-layer.js'
+      - '.github/workflows/crm1-cache-bust-v8.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cache-bust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Update CRM1 loader
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('crm1/index.html')
+          text = p.read_text(encoding='utf-8')
+          new = '<script src="./advanced-business-layer.js?v=8"></script>'
+          old_values = [
+              '<script src="./advanced-business-layer.js?v=7"></script>',
+              '<script src="./advanced-business-layer.js?v=6"></script>',
+              '<script src="./advanced-business-layer.js?v=5"></script>',
+              '<script src="./advanced-business-layer.js?v=4"></script>',
+              '<script src="./advanced-business-layer.js?v=3"></script>',
+              '<script src="./advanced-business-layer.js?v=2"></script>',
+              '<script src="./advanced-business-layer.js"></script>',
+          ]
+          if new in text:
+              print('CRM1 loader already v8')
+          else:
+              for old in old_values:
+                  if old in text:
+                      text = text.replace(old, new, 1)
+                      p.write_text(text, encoding='utf-8')
+                      print('CRM1 loader updated to v8')
+                      break
+              else:
+                  raise SystemExit('CRM1 advanced loader not found')
+      - name: Commit loader update
+        shell: bash
+        run: |
+          if git diff --quiet -- crm1/index.html; then
+            echo 'No loader change required.'
+            exit 0
+          fi
+          git config user.name 'Aaroogyam CRM Bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add crm1/index.html
+          git commit -m 'Cache-bust CRM1 advanced loader to v8 [skip ci]'
+          git push
