@@ -19,47 +19,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Inject cache-busted advanced layer loader without replacing CRM1
+      - name: Prepare CRM1 authoritative partner layer and cache-busted loader
         shell: python
         run: |
           from pathlib import Path
           p = Path('crm1/index.html')
           text = p.read_text(encoding='utf-8')
-          new = '<script src="./advanced-business-layer.js?v=6"></script>'
+          new = '<script src="./advanced-business-layer.js?v=7"></script>'
+          replacements = [
+              ('<script src="./advanced-business-layer.js?v=6"></script>', new),
+              ('<script src="./advanced-business-layer.js?v=5"></script>', new),
+              ('<script src="./advanced-business-layer.js?v=4"></script>', new),
+              ('<script src="./advanced-business-layer.js?v=3"></script>', new),
+              ('<script src="./advanced-business-layer.js?v=2"></script>', new),
+              ('<script src="./advanced-business-layer.js"></script>', new),
+          ]
           if new in text:
-              print('Advanced layer loader already cache-busted to v6.')
-          elif '<script src="./advanced-business-layer.js?v=5"></script>' in text:
-              text = text.replace('<script src="./advanced-business-layer.js?v=5"></script>', new, 1)
-              p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v6.')
-          elif '<script src="./advanced-business-layer.js?v=4"></script>' in text:
-              text = text.replace('<script src="./advanced-business-layer.js?v=4"></script>', new, 1)
-              p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v6.')
-          elif '<script src="./advanced-business-layer.js?v=3"></script>' in text:
-              text = text.replace('<script src="./advanced-business-layer.js?v=3"></script>', new, 1)
-              p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v6.')
-          elif '<script src="./advanced-business-layer.js?v=2"></script>' in text:
-              text = text.replace('<script src="./advanced-business-layer.js?v=2"></script>', new, 1)
-              p.write_text(text, encoding='utf-8')
-              print('Updated advanced layer loader to cache-busted v6.')
-          elif '<script src="./advanced-business-layer.js"></script>' in text:
-              text = text.replace('<script src="./advanced-business-layer.js"></script>', new, 1)
-              p.write_text(text, encoding='utf-8')
-              print('Injected cache-busted advanced layer loader v6.')
+              print('Advanced layer loader already cache-busted to v7.')
           else:
-              raise SystemExit('CRM1 advanced loader not found; refusing unsafe modification')
+              for old, replacement in replacements:
+                  if old in text:
+                      text = text.replace(old, replacement, 1)
+                      print('Updated advanced layer loader to cache-busted v7.')
+                      break
+              else:
+                  raise SystemExit('CRM1 advanced loader not found; refusing unsafe modification')
+              p.write_text(text, encoding='utf-8')
+
+          a = Path('crm1/advanced-business-layer.js')
+          advanced = a.read_text(encoding='utf-8')
+          old_prefix = "'./crm1-supabase-runtime-init.js?v=1','./crm1-nav-hidden-cleanup-final.js?v=1','./crm1-order-pdf-final.js?v=1','./crm1-print-label-final.js?v=1',"
+          new_prefix = "'./crm1-supabase-runtime-init.js?v=1','./crm1-order-pdf-final.js?v=2','./crm1-partner-role-ui-final-guard.js?v=5','./crm1-nav-hidden-cleanup-final.js?v=1','./crm1-print-label-final.js?v=1',"
+          if old_prefix in advanced:
+              advanced = advanced.replace(old_prefix, new_prefix, 1)
+              print('Moved authoritative Dealer/Courier renderer before legacy modules.')
+          advanced = advanced.replace("'./crm1-partner-orders-final.js?v=7',", '', 1)
+          a.write_text(advanced, encoding='utf-8')
 
       - name: Commit integration if changed
         shell: bash
         run: |
-          if git diff --quiet -- crm1/index.html; then
+          if git diff --quiet -- crm1/index.html crm1/advanced-business-layer.js; then
             echo 'No CRM1 integration change required.'
             exit 0
           fi
           git config user.name 'Aaroogyam CRM Bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add crm1/index.html
+          git add crm1/index.html crm1/advanced-business-layer.js
           git commit -m 'Cache-bust CRM1 advanced module bootstrap [skip ci]'
           git push
