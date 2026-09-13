@@ -114,3 +114,28 @@ for (const [key, label] of roles) {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 }
+
+test('Generate Invoice searches an existing order and supports Print/PDF and Excel export', async ({ page }) => {
+  const errors=[];
+  page.on('pageerror', e=>errors.push(e.message));
+  await login(page, 'SUPER_ADMIN');
+  const invoice = page.locator('#nav .crm1-nav-group[data-group="generate-invoice"] button').filter({ hasText: /Generate Invoice/i }).first();
+  await invoice.click();
+  await page.locator('#crm1InvoiceSearch').fill('39');
+  await page.locator('#crm1InvoiceFind').click();
+  await expect(page.locator('#crm1InvoiceResults')).toContainText('Order #39',{timeout:15000});
+  await expect(page.locator('#crm1InvoicePrint')).toBeEnabled();
+  await expect(page.locator('#crm1InvoiceExcel')).toBeEnabled();
+  const popupPromise=page.waitForEvent('popup');
+  await page.locator('#crm1InvoicePrint').click();
+  const popup=await popupPromise;
+  await popup.waitForLoadState();
+  await expect(popup).toHaveTitle(/Invoice 39/i);
+  await expect(popup.locator('body')).toContainText('Order / No|Order No|Invoice / Order No');
+  await popup.close();
+  const downloadPromise=page.waitForEvent('download');
+  await page.locator('#crm1InvoiceExcel').click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toBe('Generate-Invoice-Export.csv');
+  expect(errors, errors.join('\n')).toEqual([]);
+});
