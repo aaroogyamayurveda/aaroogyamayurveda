@@ -139,3 +139,54 @@ test('Generate Invoice searches an existing order and supports Print/PDF and Exc
   expect(download.suggestedFilename()).toBe('Generate-Invoice-Export.csv');
   expect(errors, errors.join('\n')).toEqual([]);
 });
+
+for (const [key, label] of roles) {
+  test(label + ' sees Export Order Dump as the final standalone menu and opens workspace', async ({ page }) => {
+    const errors=[];
+    page.on('pageerror', e=>errors.push(e.message));
+    await login(page, key);
+    const nav=page.locator('#nav');
+    const groups=nav.locator('.crm1-nav-group');
+    const dumpGroup=nav.locator('#nav .crm1-nav-group[data-group="export-order-dump"]');
+    await expect(dumpGroup).toBeVisible();
+    const dumpIndex=await groups.evaluateAll(items=>items.findIndex(x=>x.dataset.group==='export-order-dump'));
+    const groupCount=await groups.count();
+    expect(dumpIndex).toBe(groupCount-1);
+    const dump=dumpGroup.locator('button').filter({hasText:/Export Order Dump/i}).first();
+    await expect(dump).toBeVisible();
+    await dump.click();
+    await expect(page.locator('#crm1ExportOrderDumpPage')).toBeVisible();
+    await expect(page.locator('#crm1OrderDumpFrom')).toBeVisible();
+    await expect(page.locator('#crm1OrderDumpTo')).toBeVisible();
+    await expect(page.locator('#crm1OrderDumpGenerate')).toBeVisible();
+    await expect(page.locator('#crm1OrderDumpExcel')).toBeVisible();
+    expect(errors, errors.join('\\n')).toEqual([]);
+  });
+}
+
+test('Export Order Dump generates paginated report with Generate Invoice export columns and CSV', async ({ page }) => {
+  const errors=[];
+  page.on('pageerror', e=>errors.push(e.message));
+  await login(page, 'SUPER_ADMIN');
+  const dump=page.locator('#nav .crm1-nav-group[data-group="export-order-dump"] button').filter({hasText:/Export Order Dump/i}).first();
+  await dump.click();
+  await page.locator('#crm1OrderDumpFrom').fill('2020-01-01');
+  await page.locator('#crm1OrderDumpTo').fill('2099-12-31');
+  await page.locator('#crm1OrderDumpGenerate').click();
+  await expect(page.locator('#crm1OrderDumpResults')).toContainText(/Order Number|No orders found/i,{timeout:20000});
+  const table=page.locator('#crm1OrderDumpResults table');
+  if(await table.count()){
+    const header=await table.locator('thead').innerText();
+    expect(header).toContain('Order Number');
+    expect(header).toContain('Customer');
+    expect(header).toContain('Mobile');
+    expect(header).toContain('Product');
+    expect(header).toContain('Order Total');
+    await expect(page.locator('#crm1OrderDumpExcel')).toBeEnabled();
+    const downloadPromise=page.waitForEvent('download');
+    await page.locator('#crm1OrderDumpExcel').click();
+    const download=await downloadPromise;
+    expect(download.suggestedFilename()).toBe('Order-Dump.csv');
+  }
+  expect(errors, errors.join('\\n')).toEqual([]);
+});
