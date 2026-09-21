@@ -31,7 +31,7 @@ function addStyles(){if($('crm1DealerInvoiceStyle'))return;var s=document.create
 @media(max-width:900px){.crm1-dealer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.crm1-dealer-field.wide{grid-column:span 2}}
 @media(max-width:600px){.crm1-dealer-grid{grid-template-columns:1fr}.crm1-dealer-field.wide{grid-column:span 1}}
 `;document.head.appendChild(s)}
-function field(id,label,type,cls,placeholder){return '<div class="crm1-dealer-field '+(cls||'')+'"><label for="'+id+'">'+label+'</label><'+(type==='textarea'?'textarea':'input')+' id="'+id+'" '+(type!=='textarea'?'type="'+(type||'text')+'"':'')+' '+(placeholder?'placeholder="'+esc(placeholder)+'"':'')+'></'+(type==='textarea'?'textarea':'input')+'></div>'}
+function field(id,label,type,cls,placeholder){var tag=type==='textarea'?'textarea':(type==='select'?'select':'input');var attr=type==='textarea'?'':(type==='select'?'':'type="'+(type||'text')+'"');return '<div class="crm1-dealer-field '+(cls||'')+'"><label for="'+id+'">'+label+'</label><'+tag+' id="'+id+'" '+attr+' '+(placeholder?'placeholder="'+esc(placeholder)+'"':'')+'></'+tag+'></div>'}
 function ensurePage(){
  var p=$(PAGE);if(p)return p;
  p=document.createElement('section');p.id=PAGE;p.className='page';
@@ -77,7 +77,7 @@ function rowCalc(tr){
 function readItems(){return Array.prototype.map.call($(ITEMS).querySelectorAll('tr'),rowCalc)}
 function updateRows(){readItems()}
 function syncPlace(){if(!$('diPlaceSupply')||!$('diPlaceDelivery'))return;if(!$('diPlaceSupply').value)$('diPlaceSupply').value=$('diBuyerState').value||'';if(!$('diPlaceDelivery').value)$('diPlaceDelivery').value=$('diBuyerState').value||'';updateRows()}
-function sellerObj(){var o={};['diSellerName','diSellerGSTIN','diSellerPAN','diSellerAddress','diSellerCity','diSellerState','diSellerCode','diSellerPin','diSellerPhone','diSellerEmail','diManufacturer','diMarketer'].forEach(function(id){o[id]=$(id).value});return o}
+function sellerObj(){return {name:$('diSellerName').value.trim(),gstin:$('diSellerGSTIN').value.trim(),pan:$('diSellerPAN').value.trim(),address:$('diSellerAddress').value.trim(),city:$('diSellerCity').value.trim(),state:$('diSellerState').value.trim(),code:$('diSellerCode').value.trim(),pin:$('diSellerPin').value.trim(),phone:$('diSellerPhone').value.trim(),email:$('diSellerEmail').value.trim(),manufacturer:$('diManufacturer').value.trim(),marketer:$('diMarketer').value.trim()}}
 function saveSeller(){try{localStorage.setItem(STORAGE,JSON.stringify(sellerObj()));alert('Seller profile saved.')}catch(e){alert('Could not save seller profile.')}}
 function loadSeller(){try{var o=JSON.parse(localStorage.getItem(STORAGE)||'null');if(!o)return;Object.keys(o).forEach(function(id){if($(id))$(id).value=o[id]||''});syncPlace();}catch(e){}}
 function clearForm(){if(!confirm('Clear the dealer invoice form?'))return;document.querySelectorAll('#'+FORM+' input,#'+FORM+' textarea').forEach(function(x){if(x.id!=='diInvoiceDate')x.value=''});$('diInvoiceDate').value=today();$('diTaxMode').value='auto';$('diReverseCharge').value='no';$('diCopy').selectedIndex=0;$(ITEMS).innerHTML='';state.items=[];addItem();$(PREVIEW).innerHTML='';state.html='';$('diPrint').disabled=true}
