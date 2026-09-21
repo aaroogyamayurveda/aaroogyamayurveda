@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 var PAGE='crm1DealerInvoicePage',NAV='crm1DealerInvoiceNav',FORM='crm1DealerInvoiceForm',ITEMS='crm1DealerInvoiceItems',PREVIEW='crm1DealerInvoicePreview';
-var STORAGE='crm1.dealerInvoice.seller.v1', state={items:[]};
+var STORAGE='crm1.dealerInvoice.sellers.v2',LEGACY_STORAGE='crm1.dealerInvoice.seller.v1', state={items:[]};
 function $(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){var x=Number(v);return Number.isFinite(x)?x:0}
@@ -37,7 +37,7 @@ function ensurePage(){
  p=document.createElement('section');p.id=PAGE;p.className='page';
  p.innerHTML='<div class="title"><div><h2>Generate Dealer Invoice</h2><div class="muted">Professional GST invoice generator with GST-inclusive pricing and automatic tax calculation.</div></div></div><div class="crm1-dealer-card" id="'+FORM+'">'+
  '<div class="crm1-dealer-section"><h3>Invoice Details</h3><div class="crm1-dealer-grid">'+field('diInvoiceNo','Invoice Number','text','','e.g. AAY/26-27/001')+field('diInvoiceDate','Invoice Date','date')+field('diCopy','Invoice Copy','select')+field('diReference','Order / Reference No.','text')+'</div></div>'+
- '<div class="crm1-dealer-section"><h3>Seller / Supplier Details</h3><div class="crm1-dealer-grid">'+field('diSellerName','Legal / Trade Name','text','wide')+field('diSellerGSTIN','GSTIN','text')+field('diSellerPAN','PAN','text')+field('diSellerAddress','Registered Address','textarea','wide')+field('diSellerCity','City','text')+field('diSellerState','State','text')+field('diSellerCode','State Code','text')+field('diSellerPin','PIN','text')+field('diSellerPhone','Mobile / Phone','text')+field('diSellerEmail','Email','email')+field('diManufacturer','Manufactured By','text','wide')+field('diMarketer','Marketed By','text','wide')+'</div><div class="crm1-dealer-actions"><button id="diSaveSeller" class="crm1-dealer-btn secondary" type="button">Save Seller Profile</button><button id="diLoadSeller" class="crm1-dealer-btn secondary" type="button">Load Saved Seller</button></div></div>'+
+ '<div class="crm1-dealer-section"><h3>Seller / Supplier Details</h3><div class="crm1-dealer-grid">'+field('diSellerName','Legal / Trade Name','text','wide')+field('diSellerGSTIN','GSTIN','text')+field('diSellerPAN','PAN','text')+field('diSellerAddress','Registered Address','textarea','wide')+field('diSellerCity','City','text')+field('diSellerState','State','text')+field('diSellerCode','State Code','text')+field('diSellerPin','PIN','text')+field('diSellerPhone','Mobile / Phone','text')+field('diSellerEmail','Email','email')+field('diManufacturer','Manufactured By','text','wide')+field('diMarketer','Marketed By','text','wide')+'</div><div class="crm1-dealer-actions"><select id="diSellerProfileSelect" style="min-width:250px;padding:10px;border:1px solid #cfd9d1;border-radius:8px"><option value="">Select saved seller profile</option></select><button id="diSaveSeller" class="crm1-dealer-btn secondary" type="button">Save Seller Profile</button><button id="diLoadSeller" class="crm1-dealer-btn secondary" type="button">Load Saved Seller</button></div><div id="diSellerProfileStatus" class="crm1-dealer-note"></div></div>'+
  '<div class="crm1-dealer-section"><h3>Buyer / Recipient Details</h3><div class="crm1-dealer-grid">'+field('diBuyerName','Company / Customer Name','text','wide')+field('diBuyerGSTIN','GSTIN / UIN','text')+field('diBuyerPAN','PAN','text')+field('diBuyerAddress','Billing Address','textarea','wide')+field('diBuyerShipping','Shipping / Delivery Address','textarea','wide')+field('diBuyerCity','City','text')+field('diBuyerState','State','text')+field('diBuyerCode','State Code','text')+field('diBuyerPin','PIN','text')+field('diBuyerPhone','Mobile / Phone','text')+field('diBuyerEmail','Email','email')+'</div></div>'+
  '<div class="crm1-dealer-section"><h3>Supply & Tax Settings</h3><div class="crm1-dealer-grid">'+field('diPlaceSupply','Place of Supply','text','wide')+field('diPlaceDelivery','Place of Delivery','text','wide')+field('diTaxMode','Tax Mode','select')+field('diReverseCharge','Reverse Charge','select')+field('diTerms','Payment / Terms','textarea','wide')+field('diNotes','Notes / Declaration','textarea','wide')+'</div><div class="crm1-dealer-note">Unit price is GST-inclusive by default. The system reverse-calculates taxable value and GST from the final unit price.</div></div>'+
  '<div class="crm1-dealer-section"><h3>Products / Services</h3><div class="crm1-dealer-items"><table><thead><tr><th style="width:22%">Description</th><th>HSN</th><th>Qty</th><th>Unit Price (Incl. GST)</th><th>GST %</th><th>Taxable Value</th><th>CGST</th><th>SGST</th><th>IGST</th><th>Total</th><th></th></tr></thead><tbody id="'+ITEMS+'"></tbody></table></div><div class="crm1-dealer-actions"><button id="diAddItem" class="crm1-dealer-btn secondary" type="button">+ Add Product</button></div></div>'+
@@ -53,7 +53,7 @@ function ensurePage(){
  $('diClear').onclick=clearForm;
  $('diSaveSeller').onclick=saveSeller;$('diLoadSeller').onclick=loadSeller;
  ['diSellerState','diBuyerState'].forEach(function(id){$(id).addEventListener('input',syncPlace)});
- addItem();loadSeller();
+ addItem();refreshSellerProfiles();
  return p
 }
 function ensureNav(){var n=$('nav');if(!n||$(NAV))return;var b=document.createElement('button');b.id=NAV;b.type='button';b.textContent='▤ Generate Dealer Invoice';b.onclick=function(e){e.preventDefault();e.stopPropagation();open()};n.appendChild(b)}
@@ -78,8 +78,39 @@ function readItems(){return Array.prototype.map.call($(ITEMS).querySelectorAll('
 function updateRows(){readItems()}
 function syncPlace(){if(!$('diPlaceSupply')||!$('diPlaceDelivery'))return;if(!$('diPlaceSupply').value)$('diPlaceSupply').value=$('diBuyerState').value||'';if(!$('diPlaceDelivery').value)$('diPlaceDelivery').value=$('diBuyerState').value||'';updateRows()}
 function sellerObj(){return {name:$('diSellerName').value.trim(),gstin:$('diSellerGSTIN').value.trim(),pan:$('diSellerPAN').value.trim(),address:$('diSellerAddress').value.trim(),city:$('diSellerCity').value.trim(),state:$('diSellerState').value.trim(),code:$('diSellerCode').value.trim(),pin:$('diSellerPin').value.trim(),phone:$('diSellerPhone').value.trim(),email:$('diSellerEmail').value.trim(),manufacturer:$('diManufacturer').value.trim(),marketer:$('diMarketer').value.trim()}}
-function saveSeller(){try{localStorage.setItem(STORAGE,JSON.stringify(sellerObj()));alert('Seller profile saved.')}catch(e){alert('Could not save seller profile.')}}
-function loadSeller(){try{var o=JSON.parse(localStorage.getItem(STORAGE)||'null');if(!o)return;Object.keys(o).forEach(function(id){if($(id))$(id).value=o[id]||''});syncPlace();}catch(e){}}
+function sellerProfiles(){
+ try{var raw=localStorage.getItem(STORAGE),list=raw?JSON.parse(raw):[];if(Array.isArray(list))return list}catch(e){}
+ try{var legacy=JSON.parse(localStorage.getItem(LEGACY_STORAGE)||'null');if(legacy&&typeof legacy==='object'){var migrated=[Object.assign({profileName:legacy.name||'Default Seller'},legacy)];localStorage.setItem(STORAGE,JSON.stringify(migrated));return migrated}}catch(e){}
+ return [];
+}
+function writeSellerProfiles(list){try{localStorage.setItem(STORAGE,JSON.stringify(list));return true}catch(e){return false}}
+function setSellerStatus(msg){var el=$('diSellerProfileStatus');if(el)el.textContent=msg||''}
+function refreshSellerProfiles(selected){
+ var s=$('diSellerProfileSelect');if(!s)return;
+ var list=sellerProfiles(),current=selected==null?s.value:selected;
+ s.innerHTML='<option value="">Select saved seller profile</option>';
+ list.forEach(function(p,i){var name=String(p.profileName||p.name||('Seller Profile '+(i+1))).trim(),o=document.createElement('option');o.value=String(i);o.textContent=name;s.appendChild(o)});
+ if(current!==''&&list[current])s.value=String(current);
+}
+function saveSeller(){
+ try{
+  var list=sellerProfiles(),profile=sellerObj(),name=String(profile.name||'').trim()||('Seller Profile '+(list.length+1));
+  profile.profileName=name;
+  var idx=list.findIndex(function(p){return String(p.profileName||p.name||'').trim().toLowerCase()===name.toLowerCase()});
+  if(idx>=0)list[idx]=profile;else{list.push(profile);idx=list.length-1}
+  if(!writeSellerProfiles(list)){setSellerStatus('Could not save seller profile.');return}
+  refreshSellerProfiles(String(idx));setSellerStatus('Seller profile saved: '+name);
+ }catch(e){setSellerStatus('Could not save seller profile.')}
+}
+function loadSeller(){
+ try{
+  var s=$('diSellerProfileSelect'),list=sellerProfiles(),idx=s?Number(s.value):NaN,o=Number.isInteger(idx)&&idx>=0?list[idx]:null;
+  if(!o){setSellerStatus('Select a saved seller profile first.');return}
+  var map={name:'diSellerName',gstin:'diSellerGSTIN',pan:'diSellerPAN',address:'diSellerAddress',city:'diSellerCity',state:'diSellerState',code:'diSellerCode',pin:'diSellerPin',phone:'diSellerPhone',email:'diSellerEmail',manufacturer:'diManufacturer',marketer:'diMarketer'};
+  Object.keys(map).forEach(function(k){if($(map[k]))$(map[k]).value=o[k]||''});
+  syncPlace();setSellerStatus('Saved seller profile loaded: '+(o.profileName||o.name||'Selected profile'));
+ }catch(e){setSellerStatus('Could not load saved seller profile.')}
+}
 function clearForm(){if(!confirm('Clear the dealer invoice form?'))return;document.querySelectorAll('#'+FORM+' input,#'+FORM+' textarea').forEach(function(x){if(x.id!=='diInvoiceDate')x.value=''});$('diInvoiceDate').value=today();$('diTaxMode').value='auto';$('diReverseCharge').value='no';$('diCopy').selectedIndex=0;$(ITEMS).innerHTML='';state.items=[];addItem();$(PREVIEW).innerHTML='';state.html='';$('diPrint').disabled=true}
 function validate(items){
  var required=[['diInvoiceNo','Invoice Number'],['diInvoiceDate','Invoice Date'],['diSellerName','Seller Name'],['diSellerAddress','Seller Address'],['diSellerGSTIN','Seller GSTIN'],['diBuyerName','Buyer Name'],['diBuyerAddress','Buyer Address']];
