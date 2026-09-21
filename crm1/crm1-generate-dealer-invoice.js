@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 var PAGE='crm1DealerInvoicePage',NAV='crm1DealerInvoiceNav',FORM='crm1DealerInvoiceForm',ITEMS='crm1DealerInvoiceItems',PREVIEW='crm1DealerInvoicePreview';
-var STORAGE='crm1.dealerInvoice.sellers.v2',LEGACY_STORAGE='crm1.dealerInvoice.seller.v1', state={items:[]};
+var STORAGE='crm1.dealerInvoice.sellers.v2',LEGACY_STORAGE='crm1.dealerInvoice.seller.v1', state={items:[],previewUrl:''};
 function $(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){var x=Number(v);return Number.isFinite(x)?x:0}
@@ -148,15 +148,18 @@ function generate(){
   var d=buildData();if(!d)return;
   state.data=d;state.html=invoiceDocument(d);
   var box=$(PREVIEW);if(!box)throw new Error('Invoice preview container not found.');
+  if(state.previewUrl){try{URL.revokeObjectURL(state.previewUrl)}catch(e){}state.previewUrl='';}
+  var blob=new Blob([state.html],{type:'text/html;charset=utf-8'});
+  state.previewUrl=URL.createObjectURL(blob);
   box.innerHTML='<iframe title="Dealer Invoice Preview" style="width:100%;height:900px;border:1px solid #d9e0da;border-radius:10px;background:#fff"></iframe>';
   var frame=box.querySelector('iframe');
   if(!frame)throw new Error('Invoice preview frame could not be created.');
-  frame.srcdoc=state.html;
+  frame.src=state.previewUrl;
   $('diPrint').disabled=false;
   box.scrollIntoView({behavior:'smooth',block:'start'});
  }catch(e){
   console.error('Dealer invoice preview failed:',e);
-  alert('Invoice preview could not be generated. Please check the entered details and try again.');
+  alert('Invoice preview could not be generated: '+(e&&e.message?e.message:'Unknown error'));
  }
 }
 function printHtml(html){
