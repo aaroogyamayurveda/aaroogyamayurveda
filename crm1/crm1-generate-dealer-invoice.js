@@ -14,7 +14,7 @@ function words(num){
  function two(x){if(x<20)return ones[x];return tens[Math.floor(x/10)]+(x%10?' '+ones[x%10]:'')}
  function three(x){return x>=100?ones[Math.floor(x/100)]+' Hundred'+(x%100?' '+two(x%100):''):two(x)}
  num=Math.round(n(num)*100)/100;var rupees=Math.floor(num),paise=Math.round((num-rupees)*100);if(rupees===0)return paise?'Zero Rupees and '+two(paise)+' Paise Only':'Zero Rupees Only';
- var parts=[],crore=Math.floor(rupees/10000000);rupees%=10000000,lakhs=Math.floor(rupees/100000);rupees%=100000,thousands=Math.floor(rupees/1000);rupees%=1000;
+ var parts=[],crore=Math.floor(rupees/10000000),lakhs;rupees%=10000000,lakhs=Math.floor(rupees/100000);rupees%=100000,thousands=Math.floor(rupees/1000);rupees%=1000;
  if(crore)parts.push(three(crore)+' Crore');if(lakhs)parts.push(three(lakhs)+' Lakh');if(thousands)parts.push(three(thousands)+' Thousand');if(rupees)parts.push(three(rupees));
  return parts.join(' ')+(paise?' and '+two(paise)+' Paise':'')+' Only';
 }
