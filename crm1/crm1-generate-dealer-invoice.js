@@ -143,8 +143,35 @@ function invoiceDocument(d){
  '<div class="bottom"><div class="sign"><b>Terms / Notes</b><div style="margin-top:6px;white-space:pre-line">'+esc(d.terms||d.notes||'')+'</div></div><div class="sign right"><b>For '+esc(s.name)+'</b><div class="seal"></div><div>____________________________</div><b>Authorized Signatory</b><div style="font-size:8px;margin-top:3px">Company Seal / Stamp (if applicable)</div></div></div>'+
  '<div class="footer">'+(d.notes?esc(d.notes)+'<br>':'')+'Whether tax is payable under reverse charge: '+esc(d.reverse)+'<br>Invoice contains GST-inclusive unit prices; taxable value and applicable GST are calculated from the inclusive amount. Verify invoice particulars before issue and retain the accounting/tax record as required.</div><div class="computer">This is a computer-generated invoice.</div></div></body></html>';
 }
-function generate(){var d=buildData();if(!d)return;state.data=d;state.html=invoiceDocument(d);$(PREVIEW).innerHTML='<iframe title="Dealer Invoice Preview"></iframe>';var f=$(PREVIEW).querySelector('iframe');f.contentWindow.document.open();f.contentWindow.document.write(state.html);f.contentWindow.document.close();$('diPrint').disabled=false;f.scrollIntoView({behavior:'smooth',block:'start'})}
-function printHtml(html){var w=window.open('','_blank');if(!w){alert('Please allow pop-ups to print the invoice.');return}w.document.open();w.document.write(html);w.document.close();w.focus();setTimeout(function(){w.print()},350)}
+function generate(){
+ try{
+  var d=buildData();if(!d)return;
+  state.data=d;state.html=invoiceDocument(d);
+  var box=$(PREVIEW);if(!box)throw new Error('Invoice preview container not found.');
+  box.innerHTML='<iframe title="Dealer Invoice Preview" style="width:100%;height:900px;border:1px solid #d9e0da;border-radius:10px;background:#fff"></iframe>';
+  var frame=box.querySelector('iframe');
+  if(!frame)throw new Error('Invoice preview frame could not be created.');
+  frame.srcdoc=state.html;
+  $('diPrint').disabled=false;
+  box.scrollIntoView({behavior:'smooth',block:'start'});
+ }catch(e){
+  console.error('Dealer invoice preview failed:',e);
+  alert('Invoice preview could not be generated. Please check the entered details and try again.');
+ }
+}
+function printHtml(html){
+ try{
+  if(!html){alert('Please generate the invoice preview first.');return}
+  var w=window.open('about:blank','_blank');
+  if(!w){alert('Please allow pop-ups for CRM1 to print/save the invoice.');return}
+  w.document.open();w.document.write(html);w.document.close();
+  w.focus();
+  setTimeout(function(){try{w.print()}catch(e){console.error('Dealer invoice print failed:',e)}},350);
+ }catch(e){
+  console.error('Dealer invoice print failed:',e);
+  alert('Print / Save PDF could not be opened. Please allow pop-ups and try again.');
+ }
+}
 function start(){addStyles();ensurePage();ensureNav();var observer=new MutationObserver(function(){ensureNav()});observer.observe(document.body,{childList:true,subtree:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
