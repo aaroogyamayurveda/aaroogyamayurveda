@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 var PAGE='crm1DealerInvoicePage',NAV='crm1DealerInvoiceNav',FORM='crm1DealerInvoiceForm',ITEMS='crm1DealerInvoiceItems',PREVIEW='crm1DealerInvoicePreview';
-var SIGNATURE_IMAGE='https://raw.githubusercontent.com/aaroogyamayurveda/aaroogyamayurveda/main/crm1/assets/chetan-sharma-signature.png';
+var SIGNATURE_IMAGE='./assets/chetan-sharma-signature.svg';
 var STORAGE='crm1.dealerInvoice.sellers.v2',LEGACY_STORAGE='crm1.dealerInvoice.seller.v1', state={items:[],previewUrl:''};
 function $(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
