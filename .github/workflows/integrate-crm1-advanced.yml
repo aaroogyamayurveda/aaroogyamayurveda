@@ -26,7 +26,7 @@ jobs:
           p = Path('crm1/index.html')
           text = p.read_text(encoding='utf-8')
           old = '<script src="./advanced-business-layer.js"></script>'
-          new = '<script src="./advanced-business-layer.js?v=5"></script>'
+          new = '<script src="./advanced-business-layer.js?v=6"></script>'
           if new in text:
               print('Advanced layer loader already cache-busted v5.')
           elif '<script src="./advanced-business-layer.js?v=4"></script>' in text:
