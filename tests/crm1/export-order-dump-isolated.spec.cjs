@@ -107,7 +107,7 @@ test('isolated Export Order Dump: navigation, CHETS columns, mapping and CSV dow
   const csv = await fs.readFile(downloadPath, 'utf8');
   const csvText = csv.replace(/^\uFEFF/, '');
   const csvLines = csvText.trim().split(/\r?\n/);
-  expect(csvLines[0].split(',')).toEqual(headers);
+  expect(csvLines[0]).toBe(headers.map(h => '"' + h.replace(/"/g, '""') + '"').join(','));
   expect(csvLines).toHaveLength(2);
   expect(csvLines[1]).toContain('ORD-ISOLATED-101');
   expect(csvLines[1]).toContain('Ortho Gold');
