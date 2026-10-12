@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-  pull_request:
 
 permissions:
   contents: read
 
-# CRM1 authenticated regression gate: runs on every main push.
+# CRM1 authenticated regression gate: runs on main pushes or manual dispatch.
+# Do not run this against production on pull_request; PR code is not deployed there.
 jobs:
   crm1-live:
     runs-on: ubuntu-latest
