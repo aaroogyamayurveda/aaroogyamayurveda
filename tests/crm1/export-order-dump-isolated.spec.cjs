@@ -31,6 +31,7 @@ test('isolated Export Order Dump: navigation, CHETS columns, mapping and CSV dow
       customers: {
         customer_name: 'Test Client',
         mobile: '9876543210',
+        alternate_mobile: '9123456780',
         address: 'Customer fallback address',
         city: 'Customer City',
         state: 'Customer State',
@@ -87,7 +88,7 @@ test('isolated Export Order Dump: navigation, CHETS columns, mapping and CSV dow
   expect(cells[0]).toBe('10/10/2026');
   expect(cells[1]).toBe('ORD-ISOLATED-101');
   expect(cells[2]).toBe('Test Client');
-  expect(cells[3]).toBe('9876543210');
+  expect(cells[3]).toBe('9876543210 / 9123456780');
   expect(cells[4]).toBe('Indore');
   expect(cells[5]).toBe('Indore');
   expect(cells[6]).toBe('12 Test Street');
@@ -110,6 +111,7 @@ test('isolated Export Order Dump: navigation, CHETS columns, mapping and CSV dow
   expect(csvLines[0]).toBe(headers.map(h => '"' + h.replace(/"/g, '""') + '"').join(','));
   expect(csvLines).toHaveLength(2);
   expect(csvLines[1]).toContain('ORD-ISOLATED-101');
+  expect(csvLines[1]).toContain('9876543210 / 9123456780');
   expect(csvLines[1]).toContain('Ortho Gold');
   expect(pageErrors).toEqual([]);
 });
