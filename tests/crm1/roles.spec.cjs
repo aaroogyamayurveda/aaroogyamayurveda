@@ -173,7 +173,7 @@ test('Export Order Dump generates paginated report with Generate Invoice export 
   await expect(page.locator('#crm1OrderDumpResults')).toContainText(/BATCH DATE|No orders found/i,{timeout:20000});
   const table=page.locator('#crm1OrderDumpResults table');
   if(await table.count()){
-    const header=(await table.locator('thead').innerText()).split(/\\s{2,}|\\n/).map(x=>x.trim()).filter(Boolean);
+    const header=(await table.locator('thead th').allTextContents()).map(x=>x.trim());
     expect(header).toEqual(['BATCH DATE','ORDER ID','CLIENT','MOBILE','CITY','DISTRICT','ADDRESS','PIN','STATE','PRODUCT','QTY','PRICE','HUB CODE','STATUS','REMARK']);
     await expect(page.locator('#crm1OrderDumpExcel')).toBeEnabled();
     const downloadPromise=page.waitForEvent('download');
