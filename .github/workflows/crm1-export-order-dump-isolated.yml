@@ -6,6 +6,7 @@ on:
     paths:
       - 'crm1/crm1-export-order-dump.js'
       - 'tests/crm1/export-order-dump-isolated.spec.cjs'
+      - 'tests/crm1/roles.spec.cjs'
       - '.github/workflows/crm1-export-order-dump-isolated.yml'
 
 permissions:
