@@ -6,19 +6,9 @@ test('isolated Export Order Dump: navigation, CHETS columns, mapping and CSV dow
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(error.message));
 
-  await page.setContent(\`
-    <!doctype html>
-    <html><head><meta charset="utf-8"><title>Isolated CRM1 Export Order Dump Test</title></head>
-    <body>
-      <nav id="nav"><button id="fixtureOtherNav" type="button">Dashboard</button></nav>
-      <div class="main">
-        <section id="dashboard" class="page active"><h2>Dashboard</h2></section>
-      </div>
-    </body></html>
-  \`);
+  await page.setContent('<!doctype html><html><head><meta charset="utf-8"><title>Isolated test</title></head><body><nav id="nav"><button id="fixtureOtherNav" type="button">Dashboard</button></nav><div class="main"><section id="dashboard" class="page active"><h2>Dashboard</h2></section></div></body></html>');
 
-  // Mimic the navigation reset that can occur after a menu click. This is a
-  // local fixture only; it does not load or mutate the live CRM1 application.
+  // Mimic the navigation reset locally; this fixture never opens live CRM1.
   await page.evaluate(() => {
     document.addEventListener('click', event => {
       if (!event.target.closest('#nav button')) return;
@@ -58,21 +48,18 @@ test('isolated Export Order Dump: navigation, CHETS columns, mapping and CSV dow
     window.sb = {
       from(table) {
         if (table !== 'orders') throw new Error('Unexpected table: ' + table);
-        const query = {
+        return {
           select() { return this; },
           gte() { return this; },
           lt() { return this; },
           order() { return this; },
           range() { return Promise.resolve({ data: [order], error: null }); }
         };
-        return query;
       }
     };
   });
 
-  await page.addScriptTag({
-    path: path.resolve(__dirname, '../../crm1/crm1-export-order-dump.js')
-  });
+  await page.addScriptTag({ path: path.resolve(__dirname, '../../crm1/crm1-export-order-dump.js') });
 
   const navButton = page.locator('#nav button').filter({ hasText: 'Export Order Dump' });
   await expect(navButton).toBeVisible();
@@ -118,8 +105,8 @@ test('isolated Export Order Dump: navigation, CHETS columns, mapping and CSV dow
   const downloadPath = await download.path();
   expect(downloadPath).toBeTruthy();
   const csv = await fs.readFile(downloadPath, 'utf8');
-  const csvText = csv.replace(/^\\uFEFF/, '');
-  const csvLines = csvText.trim().split(/\\r?\\n/);
+  const csvText = csv.replace(/^\uFEFF/, '');
+  const csvLines = csvText.trim().split(/\r?\n/);
   expect(csvLines[0].split(',')).toEqual(headers);
   expect(csvLines).toHaveLength(2);
   expect(csvLines[1]).toContain('ORD-ISOLATED-101');
